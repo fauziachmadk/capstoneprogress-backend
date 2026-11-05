@@ -1,0 +1,1279 @@
+{
+  "info": {
+    "name": "Caps2Tone Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Pilih request yang diperlukan. Login dahulu; cookie jar menyimpan sesi dan test script menyimpan CSRF. Isi variabel ID setelah membuat/membaca data. Request mutasi mengubah database."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:3001"
+    },
+    {
+      "key": "username",
+      "value": "admin"
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "new_user_password",
+      "value": ""
+    },
+    {
+      "key": "csrf_token",
+      "value": ""
+    },
+    {
+      "key": "asset_id",
+      "value": "7"
+    },
+    {
+      "key": "chassis_id",
+      "value": "7"
+    },
+    {
+      "key": "user_id",
+      "value": "2"
+    },
+    {
+      "key": "telegram_chat_id",
+      "value": ""
+    },
+    {
+      "key": "office_id",
+      "value": "6"
+    },
+    {
+      "key": "schedule_id",
+      "value": "2"
+    },
+    {
+      "key": "technician_id",
+      "value": "2"
+    },
+    {
+      "key": "scheduled_date",
+      "value": "2026-11-05"
+    },
+    {
+      "key": "cron_secret",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "GET /health — Ping API dan koneksi database",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Publik. Respons 200 dengan data.status=ok.",
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "POST /api/auth/login — Login dengan username/password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Publik. Cookie sesi 8 jam; simpan csrf_token untuk mutasi.",
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) pm.collectionVariables.set('csrf_token', pm.response.json().data.csrf_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST /api/auth/logout — Cabut sesi saat ini",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin / teknisi; memerlukan X-CSRF-Token.",
+        "url": {
+          "raw": "{{base_url}}/api/auth/logout",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "logout"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/auth/me — Pengguna, area dan CSRF sesi saat ini",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin / teknisi.",
+        "url": {
+          "raw": "{{base_url}}/api/auth/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ],
+          "query": []
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) pm.collectionVariables.set('csrf_token', pm.response.json().data.csrf_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /api/users — Daftar pengguna untuk penugasan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "POST /api/users — Buat akun dengan hash bcrypt dan area layanan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Teknisi Baru\",\n  \"username\": \"teknisi.baru\",\n  \"password\": \"{{new_user_password}}\",\n  \"role\": \"teknisi\",\n  \"areas\": [\n    \"grobogan\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201) { const d=pm.response.json().data; pm.collectionVariables.set('user_id',String(d.id)); if(d.role==='teknisi') pm.collectionVariables.set('technician_id',String(d.id)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PATCH /api/users/:id — Ubah profil, area, chat ID atau status aktif akun",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. Sesi dicabut ketika password, role, area atau status aktif berubah; admin aktif terakhir dilindungi.",
+        "url": {
+          "raw": "{{base_url}}/api/users/{{user_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "{{user_id}}"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"telegram_chat_id\": \"{{telegram_chat_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GET /api/offices — Daftar kantor",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin; teknisi hanya kantor penugasannya.",
+        "url": {
+          "raw": "{{base_url}}/api/offices",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "offices"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "POST /api/offices — Buat kantor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/offices",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "offices"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"KTR-NEW\",\n  \"name\": \"Kantor Baru\",\n  \"area\": \"grobogan\",\n  \"address\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201) { const d=pm.response.json().data; pm.collectionVariables.set('office_id',String(d.id)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /api/offices/:id — Detail kantor",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin / teknisi; teknisi dibatasi kantor penugasannya.",
+        "url": {
+          "raw": "{{base_url}}/api/offices/{{office_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "offices",
+            "{{office_id}}"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "PATCH /api/offices/:id — Perbarui kantor",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. Area kantor dengan jadwal tidak dapat diganti.",
+        "url": {
+          "raw": "{{base_url}}/api/offices/{{office_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "offices",
+            "{{office_id}}"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Kantor Diperbarui\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "DELETE /api/offices/:id — Hapus kantor yang belum dipakai",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin; referensi aset/jadwal mencegah penghapusan.",
+        "url": {
+          "raw": "{{base_url}}/api/offices/{{office_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "offices",
+            "{{office_id}}"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/assets — Pencarian dan daftar aset",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/assets",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/assets/:id — Detail aset dengan kondisi sesuai queryDB.md",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/{{asset_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "{{asset_id}}"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "POST /api/assets — Tambah satu aset melalui JSON",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. ID integer, SN dinormalisasi, parent_id harus menunjuk chassis sekantor. condition merupakan alias kompatibilitas kondisi.",
+        "url": {
+          "raw": "{{base_url}}/api/assets",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"chassis\",\n  \"eq\": \"EQ-BARU\",\n  \"serial_number\": \"SN-BARU\",\n  \"office_id\": \"{{office_id}}\",\n  \"ref\": \"\",\n  \"status\": \"Aktif\",\n  \"kondisi\": \"Baik\",\n  \"asset_code\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201) { const d=pm.response.json().data; pm.collectionVariables.set('asset_id',String(d.id)); if(d.kind==='chassis') pm.collectionVariables.set('chassis_id',String(d.id)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /api/technician/assets — Aset di kantor jadwal teknisi",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Teknisi; schedule_id milik sendiri atau belum ditugaskan di area layanannya.",
+        "url": {
+          "raw": "{{base_url}}/api/technician/assets?schedule_id={{schedule_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "technician",
+            "assets"
+          ],
+          "query": [
+            {
+              "key": "schedule_id",
+              "value": "{{schedule_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/technician/chassis — Daftar chassis dan progres modul",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Teknisi. Jadwal dan area layanan divalidasi.",
+        "url": {
+          "raw": "{{base_url}}/api/technician/chassis?schedule_id={{schedule_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "technician",
+            "chassis"
+          ],
+          "query": [
+            {
+              "key": "schedule_id",
+              "value": "{{schedule_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/technician/chassis/:id/modules — Daftar modul dalam satu chassis",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Teknisi. Chassis harus berada di kantor jadwal.",
+        "url": {
+          "raw": "{{base_url}}/api/technician/chassis/{{chassis_id}}/modules?schedule_id={{schedule_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "technician",
+            "chassis",
+            "{{chassis_id}}",
+            "modules"
+          ],
+          "query": [
+            {
+              "key": "schedule_id",
+              "value": "{{schedule_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "PATCH /api/assets/:id — Ubah REF/STATUS/KONDISI secara atomik dengan audit",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin / teknisi. Teknisi wajib menyertakan schedule_id aktif hari ini. kondisi mengikuti konfigurasi izin; condition diterima sebagai alias. null dinormalisasi menjadi string kosong.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/{{asset_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "{{asset_id}}"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ref\": \"REF-BARU\",\n  \"status\": \"Aktif\",\n  \"kondisi\": \"Baik\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GET /api/assets/:id/history — Riwayat perubahan aset",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. field KONDISI bernama kondisi.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/{{asset_id}}/history",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "{{asset_id}}",
+            "history"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/assets/export — Ekspor XLSX sesuai filter",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin; maksimal 10.000 baris. page/limit tidak membatasi ekspor.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/export",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "export"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "POST /api/assets/import — Pratinjau atau simpan impor XLSX atomik",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. multipart/form-data satu field file. Maks. 3 MB, satu sheet, 5.000 baris. Kolom opsional yang tidak disertakan dipertahankan; sel kosong menghapus nilai.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/import?dry_run=true",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "import"
+          ],
+          "query": [
+            {
+              "key": "dry_run",
+              "value": "true"
+            }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST /api/scan/match — Cocokkan SN dalam kantor penugasan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Teknisi. Result: found / not_found / multiple. SN dinormalisasi trim + uppercase.",
+        "url": {
+          "raw": "{{base_url}}/api/scan/match",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "scan",
+            "match"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serial_number\": \"SN-001\",\n  \"schedule_id\": \"{{schedule_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST /api/mapping-results — Catat satu scan dan perbarui status/label aset",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Teknisi; jadwal aktif hari ini. Server menghitung result. Untuk multiple, asset_id opsional sebagai pilihan EQ; tanpa pilihan status aset tidak diubah. Hasil multiple tetap multiple.",
+        "url": {
+          "raw": "{{base_url}}/api/mapping-results",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "mapping-results"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"schedule_id\": \"{{schedule_id}}\",\n  \"scanned_sn\": \"SN-001\",\n  \"label_attached\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST /api/assets/:id/not-found — Tandai aset yang diharapkan tetapi tidak ditemukan fisik",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Teknisi pada jadwal aktif hari ini. Berbeda dari scan SN asing tanpa asset_id.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/{{asset_id}}/not-found",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "{{asset_id}}",
+            "not-found"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"schedule_id\": \"{{schedule_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GET /api/schedules — Daftar jadwal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin; teknisi melihat jadwal sendiri dan jadwal tanpa penugasan pada area layanannya.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "POST /api/schedules — Buat jadwal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. Tanggal >= hari ini; kantor, area, teknisi harus cocok; jadwal aktif unik per kantor/tanggal.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"office_id\": \"{{office_id}}\",\n  \"area\": \"grobogan\",\n  \"scheduled_date\": \"{{scheduled_date}}\",\n  \"assigned_to\": \"{{technician_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201) { const d=pm.response.json().data; pm.collectionVariables.set('schedule_id',String(d.id)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PATCH /api/schedules/:id — Ubah jadwal atau tutup jadwal",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. Selesai/dibatalkan bersifat final; identitas penugasan tidak dapat diganti setelah scan.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules/{{schedule_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules",
+            "{{schedule_id}}"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"selesai\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "PATCH /api/schedules — Ubah jadwal dengan id di body",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. Alias PATCH /api/schedules/:id.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{schedule_id}}\",\n  \"status\": \"selesai\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "DELETE /api/schedules/:id — Batalkan jadwal; pertahankan hasil scan",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Jadwal selesai tidak dapat dibatalkan.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules/{{schedule_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules",
+            "{{schedule_id}}"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "DELETE /api/schedules — Batalkan jadwal dengan query id",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Alias DELETE /api/schedules/:id.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules?id={{schedule_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules"
+          ],
+          "query": [
+            {
+              "key": "id",
+              "value": "{{schedule_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /api/dashboard/progress — Progres status aset per kantor",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Progres = (sudah + tidak_ditemukan) / total. Status aset merupakan keadaan terkini, bukan snapshot per jadwal.",
+        "url": {
+          "raw": "{{base_url}}/api/dashboard/progress",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "dashboard",
+            "progress"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/dashboard/summary — Ringkasan total aset dan status mapping",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/dashboard/summary",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "dashboard",
+            "summary"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/reports/mapping — Laporan satu baris per scan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Filter tanggal memakai tanggal scan pada APP_TIMEZONE; REF/status/kondisi adalah keadaan aset terkini.",
+        "url": {
+          "raw": "{{base_url}}/api/reports/mapping",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "reports",
+            "mapping"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/reports/mapping/export — Ekspor laporan XLSX",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Maksimal 10.000 scan.",
+        "url": {
+          "raw": "{{base_url}}/api/reports/mapping/export",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "reports",
+            "mapping",
+            "export"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/notifications/logs — Log notifikasi dan status pengiriman",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/notifications/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notifications",
+            "logs"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/cron/notify-schedule — Kirim notifikasi jadwal hari ini",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{cron_secret}}"
+          }
+        ],
+        "description": "Authorization: Bearer CRON_SECRET. Deduplikasi per tanggal/penerima/kantor/bagian.",
+        "url": {
+          "raw": "{{base_url}}/api/cron/notify-schedule",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "cron",
+            "notify-schedule"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/cron/notify-results — Kirim ringkasan hasil jadwal hari ini",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{cron_secret}}"
+          }
+        ],
+        "description": "Authorization: Bearer CRON_SECRET. Kegagalan dapat dicoba ulang sesudah 15 menit.",
+        "url": {
+          "raw": "{{base_url}}/api/cron/notify-results",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "cron",
+            "notify-results"
+          ],
+          "query": []
+        }
+      }
+    }
+  ]
+}

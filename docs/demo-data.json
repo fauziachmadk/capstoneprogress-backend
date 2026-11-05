@@ -1,0 +1,74 @@
+{
+  "created_or_verified_at": "2026-11-05T15:08:04.815Z",
+  "branch": "dev-backend-fastify",
+  "demo": true,
+  "committed": true,
+  "telegram_messages_sent": 0,
+  "counts": {
+    "offices": 2,
+    "assets": 6,
+    "schedules": 2,
+    "scans": 6,
+    "history": 2
+  },
+  "records": [
+    {
+      "office_id": 6,
+      "office_code": "DEMO-GRB",
+      "area": "grobogan",
+      "technician_id": 2,
+      "technician_username": "teknisi.grobogan",
+      "schedule_id": 2,
+      "assets": [
+        {
+          "id": 7,
+          "eq": "DEMO-GRB-CHASSIS",
+          "serial_number": "DEMO-SN-GRB-CHASSIS",
+          "kind": "chassis"
+        },
+        {
+          "id": 8,
+          "eq": "DEMO-GRB-MODUL-1",
+          "serial_number": "DEMO-SN-GRB-MODUL-GANDA",
+          "kind": "module"
+        },
+        {
+          "id": 9,
+          "eq": "DEMO-GRB-MODUL-2",
+          "serial_number": "DEMO-SN-GRB-MODUL-GANDA",
+          "kind": "module"
+        }
+      ],
+      "unknown_sn": "DEMO-SN-GRB-TIDAK-DIKENAL"
+    },
+    {
+      "office_id": 7,
+      "office_code": "DEMO-SLO",
+      "area": "solo",
+      "technician_id": 3,
+      "technician_username": "teknisi.solo",
+      "schedule_id": 3,
+      "assets": [
+        {
+          "id": 10,
+          "eq": "DEMO-SLO-CHASSIS",
+          "serial_number": "DEMO-SN-SLO-CHASSIS",
+          "kind": "chassis"
+        },
+        {
+          "id": 11,
+          "eq": "DEMO-SLO-MODUL-1",
+          "serial_number": "DEMO-SN-SLO-MODUL-GANDA",
+          "kind": "module"
+        },
+        {
+          "id": 12,
+          "eq": "DEMO-SLO-MODUL-2",
+          "serial_number": "DEMO-SN-SLO-MODUL-GANDA",
+          "kind": "module"
+        }
+      ],
+      "unknown_sn": "DEMO-SN-SLO-TIDAK-DIKENAL"
+    }
+  ]
+}

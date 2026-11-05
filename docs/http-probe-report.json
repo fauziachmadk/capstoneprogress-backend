@@ -1,0 +1,21 @@
+{
+  "tested_at": "2026-11-05T15:59:00.593Z",
+  "base_url": "http://127.0.0.1:3001",
+  "transport": "real HTTP to already-running server",
+  "timeout_ms": 15000,
+  "passed": 0,
+  "failed": 1,
+  "status": "failed",
+  "failure": "GET /health: ECONNREFUSED",
+  "results": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "expected": 200,
+      "status": null,
+      "elapsed_ms": 20,
+      "passed": false,
+      "error": "ECONNREFUSED"
+    }
+  ]
+}

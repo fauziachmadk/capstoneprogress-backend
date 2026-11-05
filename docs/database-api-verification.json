@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-11-05T15:37:15.169Z",
+  "database": "caps2tone",
+  "connection_host": "ep-late-sun-azjgrwia-pooler.c-3.ap-southeast-1.aws.neon.tech",
+  "status": "passed",
+  "checks": [
+    "users dan technician_areas: tulis fixture dengan hash password",
+    "sessions: login HTTP menghasilkan dua sesi database",
+    "offices: POST, PATCH, GET menyimpan dan membaca nilai yang sama",
+    "assets: dry run rollback, impor tiga aset, relasi chassis/modul, normalisasi SN",
+    "asset_history: tiga perubahan dicatat trigger dengan actor yang benar",
+    "mapping_schedules: penugasan tersimpan dan dapat dibaca teknisi terkait",
+    "mapping_results: found, multiple, not_found; label dan mapping_status tersimpan",
+    "dashboard, laporan dan ekspor XLSX membaca hasil transaksi database",
+    "notification_logs: tulis/baca log uji tanpa mengirim pesan",
+    "sessions: logout mencabut sesi dan akses berikutnya ditolak"
+  ],
+  "fixture_records_remaining": 0,
+  "fixture_changes_committed": false,
+  "telegram_messages_sent": 0
+}

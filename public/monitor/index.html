@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Caps2Tone — API Monitor</title>
+  <meta name="description" content="Indikator koneksi server dan database Caps2Tone secara langsung.">
+  <link rel="stylesheet" href="./style.css">
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/monitor/" aria-label="Caps2Tone API Monitor">
+      <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 28 28"><path d="m4 9 10-5 10 5-10 5-10-5Zm0 5 10 5 10-5M4 19l10 5 10-5"/></svg></span>
+      <span>Caps2Tone<span class="brand-divider">/</span><span class="brand-subtitle">API Monitor</span></span>
+    </a>
+    <div class="nav-links"><span class="local-badge"><span class="dot"></span> PENGUJIAN LANGSUNG</span><a href="/docs" target="_blank" rel="noopener">Swagger <span aria-hidden="true">↗</span></a></div>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <div><p class="eyebrow">DIAGNOSTIK KONEKSI</p><h1>Backend hidup?<br><span>Lihat langsung di sini.</span></h1><p class="intro-copy">Pantau respons API, koneksi database, dan waktu tunggu dari satu layar.</p></div>
+      <div class="target-box"><span class="small-label">TARGET SERVER</span><div><code id="target">Memuat alamat…</code><button id="copy-url" class="icon-button" type="button" aria-label="Salin alamat server" title="Salin alamat">⧉</button></div><span class="target-note">Mengikuti alamat halaman yang sedang dibuka.</span></div>
+    </section>
+
+    <section class="status-panel" id="status-panel" data-state="idle" aria-label="Status koneksi">
+      <div class="status-summary"><div class="signal-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M7 16a19 19 0 0 1 26 0M12 22a12 12 0 0 1 16 0M17 28a4.5 4.5 0 0 1 6 0"/><circle cx="20" cy="33" r="1.7"/></svg></div><div><div class="status-kicker"><span class="dot"></span><span id="status-label">SIAP DIPERIKSA</span></div><h2 id="status-title" aria-live="polite">Menunggu ping pertama</h2><p id="status-description">Hasil koneksi akan muncul setelah pemeriksaan selesai.</p></div></div>
+      <button id="ping-button" class="primary-button" type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m11 2-7 10h5l-1 6 8-11h-5l0-5Z"/></svg><span>Ping sekarang</span></button>
+    </section>
+
+    <section class="metrics" aria-label="Ringkasan hasil ping">
+      <article class="metric-card"><div class="metric-label">Server API <span class="metric-icon">↗</span></div><div class="metric-value" id="api-time">—<small>ms</small></div><div class="metric-foot"><span class="pill" id="api-pill">Belum dites</span><code>GET /ping</code></div></article>
+      <article class="metric-card"><div class="metric-label">Koneksi database <span class="metric-icon">▤</span></div><div class="metric-value" id="db-time">—<small>ms</small></div><div class="metric-foot"><span class="pill" id="db-pill">Belum dites</span><code>GET /health</code></div></article>
+      <article class="metric-card"><div class="metric-label">Siklus berhasil <span class="metric-icon">✓</span></div><div class="metric-value" id="success-value">—<small>%</small></div><div class="metric-foot"><span id="success-detail">Belum ada pemeriksaan</span></div></article>
+      <article class="metric-card"><div class="metric-label">Terakhir diperiksa <span class="metric-icon">◷</span></div><div class="metric-value time-value" id="last-time">—</div><div class="metric-foot"><span id="last-date">Waktu pada perangkat ini</span></div></article>
+    </section>
+
+    <section class="workspace">
+      <article class="card chart-card"><div class="card-heading"><div><p class="eyebrow">RESPONS DARI WAKTU KE WAKTU</p><h2>Riwayat latensi</h2></div><div class="chart-legend"><span><i class="legend-api"></i>API</span><span><i class="legend-db"></i>Database</span></div></div>
+        <div class="chart-wrap"><div class="chart-scale"><span id="chart-max">100 ms</span><span id="chart-mid">50 ms</span><span>0 ms</span></div><div class="chart-content"><svg id="chart" viewBox="0 0 640 160" preserveAspectRatio="none" role="img" aria-label="Grafik waktu respons API dan database"><path class="grid-line" d="M0 8H640M0 80H640M0 152H640"/><g id="chart-series"></g></svg><p id="chart-empty">Grafik terisi setiap kali lo melakukan ping.</p></div></div>
+        <div class="chart-bottom"><span>Maksimal 30 pemeriksaan terakhir</span><span><i class="legend-fail"></i> Tanda merah = gagal / timeout</span></div>
+      </article>
+      <aside class="card settings-card"><p class="eyebrow">KONTROL PEMERIKSAAN</p><h2>Atur ritme ping</h2><div class="setting-row"><div><label for="auto-toggle">Ping otomatis</label><p id="auto-description">Jalankan saat diperlukan</p></div><button id="auto-toggle" class="switch" type="button" role="switch" aria-checked="false" aria-label="Ping otomatis"><span></span></button></div>
+        <div class="select-grid"><label>Interval<select id="interval"><option value="5">5 detik</option><option value="10" selected>10 detik</option><option value="30">30 detik</option><option value="60">60 detik</option></select></label><label>Batas tunggu<select id="timeout"><option value="3000">3 detik</option><option value="5000">5 detik</option><option value="10000" selected>10 detik</option><option value="15000">15 detik</option></select></label></div>
+        <p class="hint"><span aria-hidden="true">ⓘ</span> Database yang baru aktif bisa merespons lebih lambat pada ping pertama.</p><div class="settings-footer"><span class="dot"></span><span id="countdown">Mode manual aktif</span></div>
+      </aside>
+    </section>
+
+    <section class="card endpoint-card"><div class="card-heading"><div><p class="eyebrow">CEK LEBIH DALAM</p><h2>Indikator endpoint</h2></div><button id="check-button" class="secondary-button" type="button">Uji semua indikator <span aria-hidden="true">↗</span></button></div>
+      <div class="table-scroll"><table><thead><tr><th>Endpoint</th><th>Fungsi</th><th>Status</th><th>Waktu</th><th class="detail-heading">Respons</th></tr></thead><tbody id="endpoint-rows"></tbody></table></div>
+      <div class="endpoint-note"><span class="note-dot"></span>Respons 401 pada pemeriksaan sesi berarti server merespons dan login diperlukan.</div>
+    </section>
+
+    <section class="card log-card"><div class="card-heading"><div><p class="eyebrow">JEJAK PEMERIKSAAN</p><h2>Log ping</h2></div><div class="log-actions"><button id="download-button" class="text-button" type="button">Unduh JSON ↓</button><button id="clear-button" class="text-button muted" type="button">Bersihkan</button></div></div><div id="log-empty" class="empty-log">Belum ada log. Pemeriksaan pertama akan dimulai otomatis.</div><ol id="log-list"></ol></section>
+    <footer class="footer"><span><span class="footer-mark">◈</span> Caps2Tone Backend</span><span>Pemeriksaan GET · tanpa mengubah data aplikasi</span></footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

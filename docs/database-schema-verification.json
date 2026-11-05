@@ -1,0 +1,118 @@
+{
+  "checked_at": "2026-11-05 15:17:52 UTC",
+  "project_id": "steep-smoke-25342823",
+  "database": "caps2tone",
+  "reference": "queryDB.md",
+  "schema_diff": "",
+  "table_count": 10,
+  "enum_count": 8,
+  "foreign_key_count": 12,
+  "index_count": 35,
+  "trigger_count": 8,
+  "migrations": [
+    {
+      "name": "001_initial.sql",
+      "checksum": "0f4e3e7dd6c20466f327e01a4f6b713a2b1049f64790ff701e2aafd0ef7497e2"
+    },
+    {
+      "name": "002_align_querydb.sql",
+      "checksum": "fbb9d13302817b6bdc7a51524297c042d6cf64d5016ed7eb3643d94b8936bd98"
+    },
+    {
+      "name": "003_notification_log_defaults.sql",
+      "checksum": "a71072932b9946949216f132e39e561091a28d7f2582bf527140864817f774af"
+    }
+  ],
+  "branches": {
+    "main": {
+      "branch_id": "br-small-firefly-azev67bu",
+      "tables": [
+        {
+          "table_name": "asset_history",
+          "rows": 0
+        },
+        {
+          "table_name": "assets",
+          "rows": 0
+        },
+        {
+          "table_name": "mapping_results",
+          "rows": 0
+        },
+        {
+          "table_name": "mapping_schedules",
+          "rows": 0
+        },
+        {
+          "table_name": "notification_logs",
+          "rows": 0
+        },
+        {
+          "table_name": "offices",
+          "rows": 0
+        },
+        {
+          "table_name": "schema_migrations",
+          "rows": 3
+        },
+        {
+          "table_name": "sessions",
+          "rows": 0
+        },
+        {
+          "table_name": "technician_areas",
+          "rows": 0
+        },
+        {
+          "table_name": "users",
+          "rows": 0
+        }
+      ]
+    },
+    "dev_backend_fastify": {
+      "branch_id": "br-nameless-hall-azf7bm95",
+      "tables": [
+        {
+          "table_name": "asset_history",
+          "rows": 2
+        },
+        {
+          "table_name": "assets",
+          "rows": 6
+        },
+        {
+          "table_name": "mapping_results",
+          "rows": 6
+        },
+        {
+          "table_name": "mapping_schedules",
+          "rows": 2
+        },
+        {
+          "table_name": "notification_logs",
+          "rows": 1
+        },
+        {
+          "table_name": "offices",
+          "rows": 4
+        },
+        {
+          "table_name": "schema_migrations",
+          "rows": 3
+        },
+        {
+          "table_name": "sessions",
+          "rows": 0
+        },
+        {
+          "table_name": "technician_areas",
+          "rows": 6
+        },
+        {
+          "table_name": "users",
+          "rows": 5
+        }
+      ]
+    }
+  }
+}
