@@ -19,7 +19,11 @@ export function assetWhere(filters: z.infer<typeof assetFilters>) {
 }
 const assetSelect = `SELECT a.id,a.eq,a.kind,a.parent_id,a.serial_number,a.ref,a.status,a.kondisi,a.kondisi AS condition,a.asset_code,
   a.office_id,a.mapping_status,a.label_status,a.label_code,a.created_at,a.updated_at,o.code AS office_code,o.name AS office_name,
-  p.serial_number AS parent_sn FROM assets a JOIN offices o ON o.id=a.office_id LEFT JOIN assets p ON p.id=a.parent_id`;
+  p.serial_number AS parent_sn,
+  (SELECT json_build_object('reason',r.reason,'rejected_by',coalesce(ru.name,''),'rejected_at',r.rejected_at)
+    FROM mapping_rejections r LEFT JOIN users ru ON ru.id=r.rejected_by
+    WHERE r.asset_id=a.id AND r.resolved_at IS NULL) AS rejection
+  FROM assets a JOIN offices o ON o.id=a.office_id LEFT JOIN assets p ON p.id=a.parent_id`;
 export function registerAssets(app: FastifyInstance, db: Database, config: Config) {
   app.post('/api/assets', async (request, reply) => {
     const user = requireRole(request, 'admin');
@@ -152,6 +156,8 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
       else if (assetId) await tx.query(`UPDATE assets SET mapping_status='sudah',
         label_status=CASE WHEN $2 THEN 'terpasang' ELSE label_status END,
         label_code=coalesce($3,label_code) WHERE id=$1`, [assetId, input.label_attached, input.label_code ?? null]);
+      // Mapping ulang menyelesaikan penolakan admin yang masih aktif.
+      if (assetId && matchResult !== 'not_found') await tx.query('UPDATE mapping_rejections SET resolved_at=now() WHERE asset_id=$1 AND resolved_at IS NULL', [assetId]);
       await tx.query("UPDATE mapping_schedules SET status='berjalan' WHERE id=$1 AND status='terjadwal'", [input.schedule_id]);
       return scan;
     }, user.id);
@@ -168,5 +174,17 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
       return (await tx.query("UPDATE assets SET mapping_status='tidak_ditemukan' WHERE id=$1 RETURNING *", [assetId])).rows[0];
     }, user.id);
     return { data: result };
+  });
+  // Admin menolak hasil mapping: aset kembali 'belum' supaya teknisi mengulang. Foto dan label lama dipertahankan.
+  app.post('/api/assets/:id/reject', async request => {
+    const user = requireRole(request, 'admin'); const assetId = paramId(request);
+    const input = z.object({ reason: z.string().trim().min(1).max(500) }).strict().parse(request.body);
+    await db.transaction(async tx => {
+      const asset = assertExists((await tx.query('SELECT id,mapping_status FROM assets WHERE id=$1 FOR UPDATE', [assetId])).rows[0]);
+      if (asset.mapping_status !== 'sudah') throw new ApiError(409, 'NOT_MAPPED', 'Hanya mapping yang sudah selesai yang dapat ditolak.');
+      await tx.query("UPDATE assets SET mapping_status='belum' WHERE id=$1", [assetId]);
+      await tx.query('INSERT INTO mapping_rejections(asset_id,reason,rejected_by) VALUES($1,$2,$3)', [assetId, input.reason, user.id]);
+    }, user.id);
+    return { data: assertExists((await db.query(`${assetSelect} WHERE a.id=$1`, [assetId])).rows[0]) };
   });
 }

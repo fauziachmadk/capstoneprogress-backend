@@ -898,6 +898,45 @@
       }
     },
     {
+      "name": "POST /api/assets/:id/reject — Tolak hasil mapping; aset kembali belum dan teknisi mengulang",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. Hanya aset dengan mapping_status sudah. Foto dan label lama dipertahankan; respons aset memuat objek rejection (reason, rejected_by, rejected_at) sampai teknisi memetakan ulang.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/{{asset_id}}/reject",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "{{asset_id}}",
+            "reject"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Foto serial number tidak terbaca\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "POST /api/assets/:id/not-found — Tandai aset yang diharapkan tetapi tidak ditemukan fisik",
       "request": {
         "method": "POST",
