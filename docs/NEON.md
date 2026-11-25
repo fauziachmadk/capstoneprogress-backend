@@ -41,7 +41,7 @@ Migrasi 004 sampai 007 menambah tabel `equipment_types`, `inventory_sites`, `ass
 | `asset_history` | Trigger otomatis untuk REF/STATUS/KONDISI; baca `/api/assets/:id/history`. |
 | `notification_logs` | Dicatat cron Telegram; baca `/api/notifications/logs`. |
 | `mapping_rejections` | `POST /api/assets/:id/reject` (admin); penolakan aktif tampil di `rejection` pada respons aset. |
-| `equipment_types`, `inventory_sites`, `asset_inventory` | Master inventaris dari CSV. Belum ada endpoint; diisi lewat `npm run inventory:import` (dev sudah terisi 5, 10, dan 1000 baris). |
+| `equipment_types`, `inventory_sites`, `asset_inventory` | Master inventaris dari CSV. Diisi lewat `npm run inventory:import` (dev sudah terisi 5, 10, dan 1000 baris). Dibaca admin lewat `GET /api/equipment-types`, `/api/inventory-sites`, `/api/inventory`, dan `/api/inventory/:id` (hanya baca). |
 | `schema_migrations` | Diisi sistem migrasi, menyimpan nama dan checksum SQL. |
 
 Urutan pengisian data: akun dan area teknisi → kantor → impor dataset aset → jadwal dan penugasan → scan → laporan. Riwayat aset, sesi, dan log notifikasi dikelola otomatis oleh backend. EQ dan kode kantor unik; SN sengaja dapat berulang. KONDISI memakai nama kolom `kondisi`, ID berupa integer, dan UUID lama tersimpan pada `legacy_id`. Penyesuaian terhadap queryDB.md dijelaskan di [QUERYDB-IMPLEMENTATION.md](QUERYDB-IMPLEMENTATION.md). Detail relasi tersedia di [ERD](ERD.md).

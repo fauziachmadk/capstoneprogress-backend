@@ -11,7 +11,7 @@
     },
     {
       "key": "username",
-      "value": "admin"
+      "value": "admin.smoke"
     },
     {
       "key": "password",
@@ -1335,6 +1335,103 @@
             "api",
             "notifications",
             "logs"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/equipment-types — Daftar jenis perangkat (master inventaris)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Memuat items: jumlah aset inventaris per jenis. search mencari nama, kategori, manufacturer, atau model.",
+        "url": {
+          "raw": "{{base_url}}/api/equipment-types",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "equipment-types"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/inventory-sites — Daftar site master inventaris",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Berbeda dari offices. Memuat items: jumlah aset inventaris per site. search mencari kode, nama, atau functional location.",
+        "url": {
+          "raw": "{{base_url}}/api/inventory-sites",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inventory-sites"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/inventory — Daftar aset master inventaris",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Hanya baca; diisi lewat npm run inventory:import. Equipment ID di sini berbeda dari assets.eq. search mencari Equipment ID, nomor inventaris, NKA, atau serial number; date_from/date_to memfilter tanggal NKA.",
+        "url": {
+          "raw": "{{base_url}}/api/inventory",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inventory"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "GET /api/inventory/:id — Detail aset master inventaris beserta jenis dan site-nya",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin.",
+        "url": {
+          "raw": "{{base_url}}/api/inventory/{{asset_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inventory",
+            "{{asset_id}}"
           ],
           "query": []
         }
