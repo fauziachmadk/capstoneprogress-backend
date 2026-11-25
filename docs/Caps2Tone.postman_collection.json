@@ -1303,6 +1303,74 @@
       }
     },
     {
+      "name": "GET /api/schedules/notify-preview — Pratinjau kirim jadwal ke Telegram per tanggal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Admin. Satu penerima per teknisi (kantor, total dan sisa perangkat belum termapping, linked, isi pesan, last_sent) plus unassigned: kantor berjadwal tanpa teknisi aktif. Chat ID tidak pernah dikembalikan.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules/notify-preview?date={{date}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules",
+            "notify-preview"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "{{date}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST /api/schedules/notify — Kirim jadwal ke Telegram secara manual",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Admin. Satu pesan per teknisi untuk tanggal itu; teknisi tanpa Telegram terhubung dilewati. Setiap pengiriman dicatat di notification_logs (type jadwal_manual) tanpa chat ID atau token. 503 jika bot belum dikonfigurasi. Kegagalan satu teknisi dilaporkan di results tanpa menghentikan yang lain.",
+        "url": {
+          "raw": "{{base_url}}/api/schedules/notify",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "schedules",
+            "notify"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"{{scheduled_date}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "GET /api/cron/notify-schedule — Kirim notifikasi jadwal hari ini",
       "request": {
         "method": "GET",

@@ -54,6 +54,8 @@ export const apiContracts: Contract[] = [
   { method: 'GET', path: '/api/reports/mapping', summary: 'Laporan satu baris per scan', roles: 'Admin. Filter tanggal memakai tanggal scan pada APP_TIMEZONE; REF/status/kondisi adalah keadaan aset terkini.', query: object(report) },
   { method: 'GET', path: '/api/reports/mapping/export', summary: 'Ekspor laporan XLSX', roles: 'Admin. Maksimal 10.000 scan.', query: object(report), binary: true },
   { method: 'GET', path: '/api/notifications/logs', summary: 'Log notifikasi dan status pengiriman', roles: 'Admin.', query: object(page) },
+  { method: 'GET', path: '/api/schedules/notify-preview', summary: 'Pratinjau kirim jadwal ke Telegram per tanggal', roles: 'Admin. Satu penerima per teknisi (kantor, total dan sisa perangkat belum termapping, linked, isi pesan, last_sent) plus unassigned: kantor berjadwal tanpa teknisi aktif. Chat ID tidak pernah dikembalikan.', query: object({ date }, ['date']) },
+  { method: 'POST', path: '/api/schedules/notify', summary: 'Kirim jadwal ke Telegram secara manual', roles: 'Admin. Satu pesan per teknisi untuk tanggal itu; teknisi tanpa Telegram terhubung dilewati. Setiap pengiriman dicatat di notification_logs (type jadwal_manual) tanpa chat ID atau token. 503 jika bot belum dikonfigurasi. Kegagalan satu teknisi dilaporkan di results tanpa menghentikan yang lain.', body: object({ date }, ['date']), example: { date: '{{scheduled_date}}' } },
   { method: 'GET', path: '/api/cron/notify-schedule', summary: 'Kirim notifikasi jadwal hari ini', roles: 'Authorization: Bearer CRON_SECRET. Deduplikasi per tanggal/penerima/kantor/bagian.' },
   { method: 'GET', path: '/api/cron/notify-results', summary: 'Kirim ringkasan hasil jadwal hari ini', roles: 'Authorization: Bearer CRON_SECRET. Kegagalan dapat dicoba ulang sesudah 15 menit.' },
 ];
@@ -74,7 +76,7 @@ export function contractSchema(method: string, path: string): Schema {
     result.consumes = ['multipart/form-data'];
     result.body = object({ file: { type: 'string', format: 'binary' } }, ['file']);
   }
-  const successCode = method === 'POST' && !['/api/auth/login', '/api/auth/logout', '/api/scan/match', '/api/assets/:id/not-found', '/api/assets/:id/reject', '/api/assets/import'].includes(path) ? 201 : method === 'DELETE' && path.includes('offices') ? 204 : 200;
+  const successCode = method === 'POST' && !['/api/auth/login', '/api/auth/logout', '/api/scan/match', '/api/assets/:id/not-found', '/api/assets/:id/reject', '/api/assets/import', '/api/schedules/notify'].includes(path) ? 201 : method === 'DELETE' && path.includes('offices') ? 204 : 200;
   result.response[successCode] = contract.binary
     ? { description: 'Excel XLSX', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } }
     : { description: 'Berhasil. data berisi objek atau daftar; meta pada daftar.', type: 'object', properties: { data: {}, meta: { type: 'object' } } };
