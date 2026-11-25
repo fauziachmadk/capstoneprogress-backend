@@ -66,6 +66,7 @@ Alternatif PostgreSQL lokal: jalankan Docker Desktop, set `$env:LOCAL_DATABASE_P
 | `npm run http:probe` | Hit HTTP ke server yang sudah berjalan pada 127.0.0.1:3001, seperti klien Postman; timeout 15 detik, laporan status/durasi, CRUD kantor uji dan cleanup. |
 | `npm run docs:generate` | Perbarui OpenAPI dan koleksi Postman dari kontrak API. |
 | `npm run assets:import -- file.xlsx admin --dry-run` | Validasi dataset asli lewat CLI; ganti `--dry-run` dengan `--commit` untuk menyimpan. |
+| `npm run inventory:import -- file.csv --dry-run` | Validasi CSV master inventaris (jenis perangkat, site, aset) tanpa menulis apa pun; ganti `--dry-run` dengan `--commit` untuk menyimpan. Aman diulang (upsert) dan berjalan dalam satu transaksi. |
 
 Struktur utama: `src/routes/` untuk endpoint; `src/services/excel.ts` untuk impor/ekspor; `src/auth.ts` untuk sesi/role/CSRF; `migrations/` untuk skema; `tests/` untuk integrasi. Lihat [ERD](docs/ERD.md), [kontrak OpenAPI](docs/openapi.json), [koleksi Postman](docs/Caps2Tone.postman_collection.json), dan [status implementasi](docs/IMPLEMENTATION.md).
 
