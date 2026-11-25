@@ -55,7 +55,7 @@
     },
     {
       "key": "scheduled_date",
-      "value": "2026-11-05"
+      "value": "2026-11-25"
     },
     {
       "key": "cron_secret",
@@ -197,7 +197,45 @@
       ]
     },
     {
-      "name": "GET /api/users — Daftar pengguna untuk penugasan",
+      "name": "POST /api/auth/register — Daftar akun teknisi (menunggu persetujuan admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Publik. Dibatasi 5 permintaan per menit. Akun berstatus menunggu dan baru bisa login setelah admin mengubah approval_status menjadi aktif.",
+        "url": {
+          "raw": "{{base_url}}/api/auth/register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Teknisi Baru\",\n  \"username\": \"teknisi.baru\",\n  \"password\": \"{{new_user_password}}\",\n  \"employee_type\": \"karyawan\",\n  \"areas\": [\n    \"solo\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GET /api/users — Daftar pengguna untuk penugasan dan persetujuan",
       "request": {
         "method": "GET",
         "header": [

@@ -43,7 +43,7 @@ export function registerAuth(app: FastifyInstance, db: Database, config: Config)
     if (unsafe && request.headers.origin && !config.FRONTEND_ORIGINS.split(',').map(v => v.trim()).includes(request.headers.origin)) {
       throw new ApiError(403, 'ORIGIN_DENIED', 'Origin tidak diizinkan.');
     }
-    if (path === '/api/auth/login' || path === '/health' || monitorPublicPaths.has(path) || path.startsWith('/docs') || path.startsWith('/api/cron/')) return;
+    if (path === '/api/auth/login' || path === '/api/auth/register' || path === '/health' || monitorPublicPaths.has(path) || path.startsWith('/docs') || path.startsWith('/api/cron/')) return;
     const token = request.cookies[sessionCookie];
     if (!token || token.length !== 64) throw new ApiError(401, 'UNAUTHENTICATED', 'Silakan login.');
     const { rows } = await db.query<User>(`SELECT u.id,u.name,u.username,u.role,u.areas::text[] AS areas,u.is_active,u.telegram_chat_id FROM sessions s
@@ -56,12 +56,16 @@ export function registerAuth(app: FastifyInstance, db: Database, config: Config)
   });
   app.post('/api/auth/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const input = z.object({ username: z.string().trim().min(1).max(100).transform(v => v.toLowerCase()), password: z.string().min(1).max(1024) }).strict().parse(request.body);
-    const { rows } = await db.query<User & { password_hash: string }>('SELECT id,name,username,role,areas::text[] AS areas,is_active,password_hash FROM users WHERE lower(username)=lower($1) AND is_active', [input.username]);
+    const { rows } = await db.query<User & { password_hash: string; approval_status: string }>('SELECT id,name,username,role,areas::text[] AS areas,is_active,approval_status,password_hash FROM users WHERE lower(username)=lower($1)', [input.username]);
     const user = rows[0];
     // Run the same expensive operation for unknown users to reduce username timing leaks.
     const dummy = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.zeRV4BVO8U1CqVMKe0/7VPuqOhYZO3e';
     const valid = await verifyPassword(input.password, user?.password_hash ?? dummy);
     if (!user || !valid) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Username atau password salah.');
+    // Status hanya diungkap setelah password benar, supaya keberadaan akun tidak bocor.
+    if (user.approval_status === 'menunggu') throw new ApiError(403, 'ACCOUNT_PENDING', 'Akun menunggu persetujuan admin.');
+    if (user.approval_status === 'ditolak') throw new ApiError(403, 'ACCOUNT_REJECTED', 'Pendaftaran akun ditolak admin.');
+    if (!user.is_active) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Username atau password salah.');
     const token = randomBytes(32).toString('hex');
     await db.transaction(async tx => {
       await tx.query('DELETE FROM sessions WHERE expires_at <= now()');

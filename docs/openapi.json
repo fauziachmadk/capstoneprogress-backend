@@ -3252,6 +3252,22 @@
                   "is_active": {
                     "type": "boolean"
                   },
+                  "employee_type": {
+                    "type": "string",
+                    "enum": [
+                      "karyawan",
+                      "magang"
+                    ]
+                  },
+                  "approval_status": {
+                    "type": "string",
+                    "enum": [
+                      "menunggu",
+                      "aktif",
+                      "ditolak",
+                      "nonaktif"
+                    ]
+                  },
                   "telegram_chat_id": {
                     "type": "string",
                     "nullable": true
@@ -3415,7 +3431,7 @@
         }
       },
       "get": {
-        "summary": "Daftar pengguna untuk penugasan",
+        "summary": "Daftar pengguna untuk penugasan dan persetujuan",
         "tags": [
           "users"
         ],
@@ -3476,6 +3492,32 @@
             },
             "in": "query",
             "name": "is_active",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "menunggu",
+                "aktif",
+                "ditolak",
+                "nonaktif"
+              ]
+            },
+            "in": "query",
+            "name": "approval_status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "karyawan",
+                "magang"
+              ]
+            },
+            "in": "query",
+            "name": "employee_type",
             "required": false
           }
         ],
@@ -3666,6 +3708,22 @@
                   "is_active": {
                     "type": "boolean"
                   },
+                  "employee_type": {
+                    "type": "string",
+                    "enum": [
+                      "karyawan",
+                      "magang"
+                    ]
+                  },
+                  "approval_status": {
+                    "type": "string",
+                    "enum": [
+                      "menunggu",
+                      "aktif",
+                      "ditolak",
+                      "nonaktif"
+                    ]
+                  },
                   "telegram_chat_id": {
                     "type": "string",
                     "nullable": true
@@ -3705,6 +3763,214 @@
         ],
         "responses": {
           "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Daftar akun teknisi (menunggu persetujuan admin)",
+        "tags": [
+          "auth"
+        ],
+        "description": "Publik. Dibatasi 5 permintaan per menit. Akun berstatus menunggu dan baru bisa login setelah admin mengubah approval_status menjadi aktif.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "username": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 72
+                  },
+                  "employee_type": {
+                    "type": "string",
+                    "enum": [
+                      "karyawan",
+                      "magang"
+                    ]
+                  },
+                  "areas": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "grobogan",
+                        "solo"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "name",
+                  "username",
+                  "password",
+                  "areas"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "description": "csrf_token dari login atau /api/auth/me."
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
             "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
             "content": {
               "application/json": {

@@ -12,12 +12,12 @@ const officeInput = z.object({ code: text.transform(v => v.toUpperCase()), name:
 export function registerSchedules(app: FastifyInstance, db: Database, config: Config) {
   app.get('/api/users', async request => {
     requireRole(request, 'admin');
-    const q = z.object({ ...pagination, role: z.enum(['admin', 'teknisi']).optional(), area: area.optional(), is_active: z.enum(['true','false']).optional() }).strict().parse(request.query);
-    const values: any[] = [q.role ?? null, q.area ?? null];
+    const q = z.object({ ...pagination, role: z.enum(['admin', 'teknisi']).optional(), area: area.optional(), is_active: z.enum(['true','false']).optional(), approval_status: z.enum(['menunggu','aktif','ditolak','nonaktif']).optional(), employee_type: z.enum(['karyawan','magang']).optional() }).strict().parse(request.query);
+    const values: any[] = [q.role ?? null, q.area ?? null, q.approval_status ?? null, q.employee_type ?? null];
     if (q.is_active !== undefined) values.push(q.is_active);
-    const where = 'WHERE ($1::text IS NULL OR u.role::text=$1) AND ($2::text IS NULL OR EXISTS (SELECT 1 FROM technician_areas WHERE user_id=u.id AND area::text=$2))' + (q.is_active !== undefined ? ' AND u.is_active=$3::boolean' : '');
+    const where = 'WHERE ($1::text IS NULL OR u.role::text=$1) AND ($2::text IS NULL OR EXISTS (SELECT 1 FROM technician_areas WHERE user_id=u.id AND area::text=$2)) AND ($3::text IS NULL OR u.approval_status::text=$3) AND ($4::text IS NULL OR u.employee_type::text=$4)' + (q.is_active !== undefined ? ' AND u.is_active=$5::boolean' : '');
     const total = Number((await db.query(`SELECT count(*) AS total FROM users u ${where}`, values)).rows[0].total);
-    const users = (await db.query(`SELECT u.id,u.name,u.username,u.role,u.telegram_chat_id,u.is_active,u.created_at,u.updated_at,
+    const users = (await db.query(`SELECT u.id,u.name,u.username,u.role,u.employee_type,u.approval_status,u.telegram_chat_id,u.is_active,u.decided_at,u.decided_by,u.created_at,u.updated_at,
       u.areas::text[] AS areas FROM users u
       ${where} ORDER BY u.name,u.id LIMIT $${values.length+1} OFFSET $${values.length+2}`, [...values, q.limit, (q.page - 1) * q.limit])).rows;
     return { data: users, meta: { page: q.page, limit: q.limit, total } };
