@@ -876,7 +876,7 @@
         "tags": [
           "assets"
         ],
-        "description": "Admin.",
+        "description": "Admin. sort (eq, kind, serial_number, office, ref, status, kondisi, mapping_status, label_status, label_code) dan dir (asc atau desc) mengurutkan di server; tanpa sort urut EQ.",
         "parameters": [
           {
             "schema": {
@@ -952,6 +952,39 @@
             },
             "in": "query",
             "name": "mapping_status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "eq",
+                "kind",
+                "serial_number",
+                "office",
+                "ref",
+                "status",
+                "kondisi",
+                "mapping_status",
+                "label_status",
+                "label_code"
+              ]
+            },
+            "in": "query",
+            "name": "sort",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "asc"
+            },
+            "in": "query",
+            "name": "dir",
             "required": false
           }
         ],

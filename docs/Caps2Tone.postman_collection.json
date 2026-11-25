@@ -514,7 +514,7 @@
             "value": "{{csrf_token}}"
           }
         ],
-        "description": "Admin.",
+        "description": "Admin. sort (eq, kind, serial_number, office, ref, status, kondisi, mapping_status, label_status, label_code) dan dir (asc atau desc) mengurutkan di server; tanpa sort urut EQ.",
         "url": {
           "raw": "{{base_url}}/api/assets",
           "host": [

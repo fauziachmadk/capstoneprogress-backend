@@ -18,6 +18,15 @@ const rowSchema = z.object({
   kondisi: z.string().trim().max(255).nullable(), asset_code: z.string().trim().max(255).nullable(),
 }).refine(v => v.kind !== 'chassis' || !v.parent_sn, { message: 'Chassis tidak boleh memiliki SN Chassis.' });
 type ImportRow = z.infer<typeof rowSchema> & { row: number; supplied_fields: string[] };
+// Pesan kesalahan baris dalam bahasa Indonesia dengan nama kolom Excel, bukan pesan mentah validator.
+const columnOf: Record<string, string> = { eq: 'EQ', kind: 'Jenis', serial_number: 'Serial Number', office_code: 'Kode Kantor', parent_sn: 'SN Chassis', ref: 'REF', status: 'Status', kondisi: 'Kondisi', asset_code: 'Kode Aset' };
+function describeIssue(issue: z.ZodIssue) {
+  const key = String(issue.path[0] ?? ''); const name = columnOf[key] ?? key;
+  if (key === 'kind') return 'Jenis harus Chassis atau Modul.';
+  if (issue.code === 'invalid_type' || issue.code === 'too_small') return `${name} wajib diisi.`;
+  if (issue.code === 'too_big') return `${name} terlalu panjang (maksimal 255 karakter).`;
+  return key ? `${name}: ${issue.message}` : issue.message;
+}
 type RowError = { row: number; message: string };
 export async function readExcel(buffer: Buffer): Promise<ImportRow[]> {
   if (buffer.length > 3 * 1024 * 1024) throw new ApiError(413, 'FILE_TOO_LARGE', 'File maksimal 3 MB.');
@@ -58,7 +67,7 @@ export async function readExcel(buffer: Buffer): Promise<ImportRow[]> {
       serial_number: value('Serial Number'), office_code: value('Kode Kantor'), parent_sn: value('SN Chassis'),
       ref: value('REF'), status: value('Status'), kondisi: value('Kondisi'), asset_code: value('Kode Aset') });
     if (!parsed.success || invalidCell) {
-      errors.push({ row: rowNumber, message: invalidCell ? 'Formula, tanggal, dan objek tidak diizinkan.' : parsed.error!.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ') });
+      errors.push({ row: rowNumber, message: invalidCell ? 'Formula, tanggal, dan objek tidak diizinkan.' : parsed.error!.issues.map(describeIssue).join('; ') });
       continue;
     }
     if (seen.has(parsed.data.eq)) errors.push({ row: rowNumber, message: 'EQ duplikat dalam file.' });

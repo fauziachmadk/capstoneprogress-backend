@@ -35,6 +35,11 @@ async function requireVerifiedChassis(tx: Database, assetId: number) {
       { chassis_id: parent.id, chassis_eq: parent.eq, chassis_mapping_status: parent.mapping_status });
   }
 }
+// Kolom yang boleh dipakai untuk mengurutkan daftar aset admin (kunci = nilai parameter sort).
+const assetSortColumns: Record<string, string> = {
+  eq: 'a.eq', kind: 'a.kind', serial_number: 'a.serial_number', office: 'o.name', ref: 'a.ref', status: 'a.status',
+  kondisi: 'a.kondisi', mapping_status: 'a.mapping_status', label_status: 'a.label_status', label_code: 'a.label_code',
+};
 // Satu kode label hanya boleh dipakai satu aset (label fisik tidak boleh ganda).
 async function assertLabelFree(tx: Database, assetId: number, labelCode: string) {
   if ((await tx.query('SELECT 1 FROM assets WHERE label_code=$1 AND id<>$2 LIMIT 1', [labelCode, assetId])).rows.length) {
@@ -64,9 +69,12 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
   });
   app.get('/api/assets', async request => {
     requireRole(request, 'admin');
-    const filters = assetFilters.parse(request.query); const where = assetWhere(filters);
+    const filters = assetFilters.extend({ sort: z.enum(Object.keys(assetSortColumns) as [string, ...string[]]).optional(), dir: z.enum(['asc', 'desc']).default('asc') }).parse(request.query);
+    const where = assetWhere(filters);
+    // Kolom urut dari daftar putih (bukan input mentah); id sebagai pemisah supaya halaman stabil.
+    const order = filters.sort ? `${assetSortColumns[filters.sort]} ${filters.dir === 'desc' ? 'DESC' : 'ASC'},a.id` : 'a.eq,a.id';
     const total = Number((await db.query(`SELECT count(*) AS total FROM assets a ${where.sql}`, where.values)).rows[0].total);
-    const rows = (await db.query(`${assetSelect} ${where.sql} ORDER BY a.eq,a.id LIMIT $${where.values.length + 1} OFFSET $${where.values.length + 2}`, [...where.values, filters.limit, (filters.page - 1) * filters.limit])).rows;
+    const rows = (await db.query(`${assetSelect} ${where.sql} ORDER BY ${order} LIMIT $${where.values.length + 1} OFFSET $${where.values.length + 2}`, [...where.values, filters.limit, (filters.page - 1) * filters.limit])).rows;
     return { data: rows, meta: { page: filters.page, limit: filters.limit, total } };
   });
   // Kantor yang dapat dibuka teknisi, masing-masing dengan jadwal yang dipakai untuk membuka asetnya (jadwal aktif hari ini
