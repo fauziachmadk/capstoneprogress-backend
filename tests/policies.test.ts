@@ -69,7 +69,7 @@ test('aset hilang, jadwal lampau/ditutup, validasi ketat, dan ID tidak valid', a
 test('migrasi idempotent, checksum menolak perubahan, impor mempertahankan header yang tidak disertakan', async t => {
   const f = await fixture(); t.after(() => f.close());
   await migrate(f.db);
-  assert.equal((await f.db.query('SELECT count(*) AS n FROM schema_migrations')).rows[0].n, 7);
+  assert.equal((await f.db.query('SELECT count(*) AS n FROM schema_migrations')).rows[0].n, 8);
   await f.db.query("UPDATE schema_migrations SET checksum='modified'");
   await assert.rejects(migrate(f.db), /sudah berubah/);
   const book = new ExcelJS.Workbook(); const sheet = book.addWorksheet('Aset');
