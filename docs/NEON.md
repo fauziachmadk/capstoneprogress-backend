@@ -25,7 +25,7 @@ Migrasi dijalankan dalam satu transaksi dengan advisory lock dan dicatat di `sch
 
 Migrasi 004 sampai 007 menambah tabel `equipment_types`, `inventory_sites`, `asset_inventory`, dan `mapping_rejections`, serta kolom `users.employee_type/approval_status/decided_at/decided_by` dan `photo_url` di `assets` dan `mapping_results`. Ringkasannya ada di [ERD](ERD.md). Tabel inventaris di dev sudah diisi dari `data_dummy_1000_baris.csv` pada 25 November 2026: 5 jenis perangkat, 10 site, dan 1000 aset (sudah dicocokkan dengan file). `main` belum berisi data itu. Akun seed dev (5 akun) otomatis berstatus `aktif`.
 
-`main` hanya berisi skema 001 sampai 003 dan 1 akun; tidak ada data bisnis. Branch pengembangan berisi 5 akun seed, 2 kantor contoh awal, serta data DEMO yang disetujui pengguna: 2 kantor, 6 aset, 2 jadwal, 6 scan, 2 riwayat, dan 1 log contoh tanpa pengiriman pesan. Data DEMO di-commit dan dapat dibaca melalui API; detail ID di demo-data.json. Backend lokal tetap memakai branch pengembangan; koneksi `.env.local` tidak diganti.
+`main` hanya berisi skema 001 sampai 003 dan 1 akun; tidak ada data bisnis. Branch pengembangan berisi 5 akun seed (dan akun uji `admin.smoke`, ditambahkan 25 November 2026 untuk `npm run smoke`), 2 kantor contoh awal, serta data DEMO yang disetujui pengguna: 2 kantor, 6 aset, 2 jadwal, 6 scan, 2 riwayat, dan 1 log contoh tanpa pengiriman pesan. Data DEMO di-commit dan dapat dibaca melalui API; detail ID di demo-data.json. Backend lokal tetap memakai branch pengembangan; koneksi `.env.local` tidak diganti.
 
 ## Tabel dan alur data
 
