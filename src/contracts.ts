@@ -14,7 +14,7 @@ const assetQuery = { ...page, search: string, office_id: entityId, kind: { type:
   mapping_status: { type: 'string', enum: ['belum', 'sudah', 'tidak_ditemukan'] } };
 const schedule = { office_id: entityId, area, scheduled_date: date, assigned_to: { ...entityId, nullable: true }, status };
 const office = { code: string, name: string, address: { type: 'string', maxLength: 1000 }, area: {...area,nullable:true} };
-const report = { ...page, office_id: entityId, schedule_id: entityId, date_from: date, date_to: date };
+const report = { ...page, office_id: entityId, schedule_id: entityId, date_from: date, date_to: date, result: { type: 'string', enum: ['found', 'not_found', 'multiple'] } };
 export const apiContracts: Contract[] = [
   { method:'GET',path:'/health',summary:'Ping API dan koneksi database',roles:'Publik. Respons 200 dengan data.status=ok.' },
   { method: 'POST', path: '/api/auth/login', summary: 'Login dengan username/password', roles: 'Publik. Cookie sesi 8 jam; simpan csrf_token untuk mutasi.', body: object({ username: string, password: { type: 'string', maxLength: 1024 } }, ['username', 'password']), example: { username: '{{username}}', password: '{{password}}' } },
@@ -49,8 +49,8 @@ export const apiContracts: Contract[] = [
   { method: 'PATCH', path: '/api/schedules', summary: 'Ubah jadwal dengan id di body', roles: 'Admin. Alias PATCH /api/schedules/:id.', body: object({ id: entityId, ...schedule }, ['id']), example: { id: '{{schedule_id}}', status: 'selesai' } },
   { method: 'DELETE', path: '/api/schedules/:id', summary: 'Batalkan jadwal; pertahankan hasil scan', roles: 'Admin. Jadwal selesai tidak dapat dibatalkan.' },
   { method: 'DELETE', path: '/api/schedules', summary: 'Batalkan jadwal dengan query id', roles: 'Admin. Alias DELETE /api/schedules/:id.', query: object({ id: entityId }, ['id']) },
-  { method: 'GET', path: '/api/dashboard/progress', summary: 'Progres status aset per kantor', roles: 'Admin. Progres = (sudah + tidak_ditemukan) / total. Status aset merupakan keadaan terkini, bukan snapshot per jadwal.', query: object({ ...page, area, office_id: entityId }) },
-  { method: 'GET', path: '/api/dashboard/summary', summary:'Ringkasan total aset dan status mapping', roles:'Admin.' },
+  { method: 'GET', path: '/api/dashboard/progress', summary: 'Progres status aset per kantor', roles: 'Admin. Progres = (sudah + tidak_ditemukan) / total; percent = sudah / total. Status aset merupakan keadaan terkini, bukan snapshot per jadwal. Tiap kantor juga memuat next_date (jadwal terjadwal terdekat mulai hari ini), last_activity (scan terakhir) dan schedule_state (berjalan, terjadwal, selesai, atau belum).', query: object({ ...page, area, office_id: entityId }) },
+  { method: 'GET', path: '/api/dashboard/summary', summary:'Ringkasan total aset dan status mapping', roles:'Admin. Memuat percent (sudah / total) dan today: jumlah scan found, not_found, multiple serta perubahan REF dan STATUS pada tanggal hari ini (APP_TIMEZONE).' },
   { method: 'GET', path: '/api/reports/mapping', summary: 'Laporan satu baris per scan', roles: 'Admin. Filter tanggal memakai tanggal scan pada APP_TIMEZONE; REF/status/kondisi adalah keadaan aset terkini.', query: object(report) },
   { method: 'GET', path: '/api/reports/mapping/export', summary: 'Ekspor laporan XLSX', roles: 'Admin. Maksimal 10.000 scan.', query: object(report), binary: true },
   { method: 'GET', path: '/api/notifications/logs', summary: 'Log notifikasi dan status pengiriman', roles: 'Admin.', query: object(page) },

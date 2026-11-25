@@ -1186,7 +1186,7 @@
             "value": "{{csrf_token}}"
           }
         ],
-        "description": "Admin. Progres = (sudah + tidak_ditemukan) / total. Status aset merupakan keadaan terkini, bukan snapshot per jadwal.",
+        "description": "Admin. Progres = (sudah + tidak_ditemukan) / total; percent = sudah / total. Status aset merupakan keadaan terkini, bukan snapshot per jadwal. Tiap kantor juga memuat next_date (jadwal terjadwal terdekat mulai hari ini), last_activity (scan terakhir) dan schedule_state (berjalan, terjadwal, selesai, atau belum).",
         "url": {
           "raw": "{{base_url}}/api/dashboard/progress",
           "host": [
@@ -1211,7 +1211,7 @@
             "value": "{{csrf_token}}"
           }
         ],
-        "description": "Admin.",
+        "description": "Admin. Memuat percent (sudah / total) dan today: jumlah scan found, not_found, multiple serta perubahan REF dan STATUS pada tanggal hari ini (APP_TIMEZONE).",
         "url": {
           "raw": "{{base_url}}/api/dashboard/summary",
           "host": [
