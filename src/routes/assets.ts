@@ -161,7 +161,7 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
       await tx.query("UPDATE mapping_schedules SET status='berjalan' WHERE id=$1 AND status='terjadwal'", [input.schedule_id]);
       return scan;
     }, user.id);
-    return reply.code(201).send({ data: result });
+    return reply.code(201).send({ data: { ...result, scanned_by_name: user.name } });
   });
   // A missing expected asset has a known ID; an unmatched SN has no asset ID.
   app.post('/api/assets/:id/not-found', async request => {

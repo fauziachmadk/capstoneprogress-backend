@@ -7,6 +7,10 @@ import { requireRole } from '../auth.js';
 import { ApiError, assertExists } from '../errors.js';
 import { area, date, id, pagination, paramId, status, text } from '../validation.js';
 const scheduleInput = z.object({ office_id: id, area, scheduled_date: date, assigned_to: id.nullable().optional(), status: status.default('terjadwal') }).strict();
+// Bentuk baris jadwal yang sama untuk daftar maupun hasil buat/ubah/batalkan.
+const scheduleSelect = `SELECT s.id,s.office_id,s.area,s.scheduled_date::text,s.assigned_to,s.status,s.created_by,s.created_at,
+  o.code AS office_code,o.name AS office_name,u.name AS technician_name FROM mapping_schedules s
+  JOIN offices o ON o.id=s.office_id LEFT JOIN users u ON u.id=s.assigned_to`;
 const schedulePatch = scheduleInput.partial().extend({ id: id.optional() }).strict().refine(v => Object.keys(v).some(k => k !== 'id'), 'Tidak ada perubahan.');
 const officeInput = z.object({ code: text.transform(v => v.toUpperCase()), name: text, address: z.string().trim().max(1000).default(''), area: area.nullable().default(null) }).strict();
 export function registerSchedules(app: FastifyInstance, db: Database, config: Config) {
@@ -73,9 +77,7 @@ export function registerSchedules(app: FastifyInstance, db: Database, config: Co
       AND ($3::text IS NULL OR s.status::text=$3) AND ($4::date IS NULL OR s.scheduled_date=$4) AND ($5::text IS NULL OR s.area::text=$5)
       AND ($6::integer IS NULL OR (s.status<>'dibatalkan' AND EXISTS(SELECT 1 FROM technician_areas ta WHERE ta.user_id=$6 AND ta.area=s.area)))`;
     const total = Number((await db.query(`SELECT count(*) AS total FROM mapping_schedules s ${where}`, args)).rows[0].total);
-    const rows = (await db.query(`SELECT s.id,s.office_id,s.area,s.scheduled_date::text,s.assigned_to,s.status,s.created_by,s.created_at,
-      o.code AS office_code,o.name AS office_name,u.name AS technician_name FROM mapping_schedules s
-      JOIN offices o ON o.id=s.office_id LEFT JOIN users u ON u.id=s.assigned_to ${where}
+    const rows = (await db.query(`${scheduleSelect} ${where}
       ORDER BY s.scheduled_date,s.id LIMIT $7 OFFSET $8`, [...args, q.limit, (q.page - 1) * q.limit])).rows;
     return { data: rows, meta: { page: q.page, limit: q.limit, total } };
   });
@@ -97,7 +99,7 @@ export function registerSchedules(app: FastifyInstance, db: Database, config: Co
       return (await tx.query(`INSERT INTO mapping_schedules(office_id,area,scheduled_date,assigned_to,status,created_by)
         VALUES($1,$2,$3,$4,$5,$6) RETURNING *`, [input.office_id, input.area, input.scheduled_date, input.assigned_to ?? null, input.status, user.id])).rows[0];
     });
-    return reply.code(201).send({ data: row });
+    return reply.code(201).send({ data: (await db.query(`${scheduleSelect} WHERE s.id=$1`, [row.id])).rows[0] });
   });
   const update = async (request: FastifyRequest) => {
     requireRole(request, 'admin'); const input = schedulePatch.parse(request.body);
@@ -118,7 +120,7 @@ export function registerSchedules(app: FastifyInstance, db: Database, config: Co
       return (await tx.query(`UPDATE mapping_schedules SET office_id=$1,area=$2,scheduled_date=$3,assigned_to=$4,status=$5 WHERE id=$6 RETURNING *`,
         [value.office_id, value.area, value.scheduled_date, value.assigned_to ?? null, value.status, scheduleId])).rows[0];
     });
-    return { data: row };
+    return { data: (await db.query(`${scheduleSelect} WHERE s.id=$1`, [row.id])).rows[0] };
   };
   app.patch('/api/schedules', update);
   app.patch('/api/schedules/:id', update);
@@ -130,7 +132,7 @@ export function registerSchedules(app: FastifyInstance, db: Database, config: Co
       if (old.status === 'selesai') throw new ApiError(409, 'SCHEDULE_CLOSED', 'Jadwal selesai tidak dapat dibatalkan.');
       return (await tx.query("UPDATE mapping_schedules SET status='dibatalkan' WHERE id=$1 RETURNING *", [scheduleId])).rows[0];
     });
-    return { data: row };
+    return { data: (await db.query(`${scheduleSelect} WHERE s.id=$1`, [row.id])).rows[0] };
   };
   app.delete('/api/schedules', cancel);
   app.delete('/api/schedules/:id', cancel);
