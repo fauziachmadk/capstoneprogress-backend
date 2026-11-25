@@ -1246,11 +1246,11 @@
         }
       },
       "patch": {
-        "summary": "Ubah REF/STATUS/KONDISI secara atomik dengan audit",
+        "summary": "Ubah REF/STATUS/KONDISI atau kode label secara atomik dengan audit",
         "tags": [
           "assets"
         ],
-        "description": "Admin / teknisi. Teknisi wajib menyertakan schedule_id aktif hari ini. kondisi mengikuti konfigurasi izin; condition diterima sebagai alias. null dinormalisasi menjadi string kosong.",
+        "description": "Admin / teknisi. Teknisi wajib menyertakan schedule_id aktif hari ini. kondisi mengikuti konfigurasi izin; condition diterima sebagai alias. null dinormalisasi menjadi string kosong. label_code memperbarui kode label (label_status menjadi terpasang); kode yang sudah dipakai aset lain ditolak 409 LABEL_IN_USE.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1281,6 +1281,11 @@
                     "minLength": 1,
                     "maxLength": 255,
                     "nullable": true
+                  },
+                  "label_code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
                   },
                   "schedule_id": {
                     "type": "integer",
@@ -1315,6 +1320,149 @@
             "description": "csrf_token dari login atau /api/auth/me."
           }
         ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/technician/offices": {
+      "get": {
+        "summary": "Kantor yang dapat dibuka teknisi beserta jadwal dan jumlah asetnya",
+        "tags": [
+          "technician"
+        ],
+        "description": "Teknisi. Per kantor: schedule_id yang dipakai untuk membuka asetnya (jadwal aktif hari ini bila ada, jika tidak jadwal terbaru yang tidak dibatalkan), can_scan (jadwal aktif hari ini), jumlah chassis dan modul, serta jumlah aset per status (total, sudah, belum, tidak_ditemukan) dan khusus modul (module_*). Kantor tanpa jadwal yang dapat diakses tidak muncul. can_scan lebih dulu, lalu nama kantor.",
         "security": [
           {
             "session": []
@@ -3041,6 +3189,191 @@
           "assets"
         ],
         "description": "Teknisi pada jadwal aktif hari ini. Modul hanya bisa ditandai setelah chassis induknya sudah terverifikasi (409 CHASSIS_NOT_VERIFIED). Berbeda dari scan SN asing tanpa asset_id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schedule_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  }
+                },
+                "required": [
+                  "schedule_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "description": "csrf_token dari login atau /api/auth/me."
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{id}/reset": {
+      "post": {
+        "summary": "Batalkan tanda tidak ditemukan; aset kembali belum termapping",
+        "tags": [
+          "assets"
+        ],
+        "description": "Teknisi pada jadwal aktif hari ini. Hanya aset berstatus tidak_ditemukan, selain itu 409 NOT_MARKED.",
         "requestBody": {
           "required": true,
           "content": {

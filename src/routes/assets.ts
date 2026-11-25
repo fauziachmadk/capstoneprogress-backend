@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Database } from '../db.js';
-import type { Config } from '../config.js';
+import { today, type Config } from '../config.js';
 import { requireRole } from '../auth.js';
 import { requireSchedule } from '../access.js';
 import { ApiError, assertExists } from '../errors.js';
@@ -35,6 +35,12 @@ async function requireVerifiedChassis(tx: Database, assetId: number) {
       { chassis_id: parent.id, chassis_eq: parent.eq, chassis_mapping_status: parent.mapping_status });
   }
 }
+// Satu kode label hanya boleh dipakai satu aset (label fisik tidak boleh ganda).
+async function assertLabelFree(tx: Database, assetId: number, labelCode: string) {
+  if ((await tx.query('SELECT 1 FROM assets WHERE label_code=$1 AND id<>$2 LIMIT 1', [labelCode, assetId])).rows.length) {
+    throw new ApiError(409, 'LABEL_IN_USE', 'Kode label sudah dipakai aset lain.');
+  }
+}
 export function registerAssets(app: FastifyInstance, db: Database, config: Config) {
   app.post('/api/assets', async (request, reply) => {
     const user = requireRole(request, 'admin');
@@ -62,6 +68,32 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
     const total = Number((await db.query(`SELECT count(*) AS total FROM assets a ${where.sql}`, where.values)).rows[0].total);
     const rows = (await db.query(`${assetSelect} ${where.sql} ORDER BY a.eq,a.id LIMIT $${where.values.length + 1} OFFSET $${where.values.length + 2}`, [...where.values, filters.limit, (filters.page - 1) * filters.limit])).rows;
     return { data: rows, meta: { page: filters.page, limit: filters.limit, total } };
+  });
+  // Kantor yang dapat dibuka teknisi, masing-masing dengan jadwal yang dipakai untuk membuka asetnya (jadwal aktif hari ini
+  // bila ada, jika tidak jadwal terbaru yang tidak dibatalkan), apakah scan boleh dilakukan, dan jumlah aset per status.
+  app.get('/api/technician/offices', async request => {
+    const user = requireRole(request, 'teknisi');
+    const rows = (await db.query(`SELECT o.id,o.code,o.name,o.address,o.area,sch.id AS schedule_id,sch.scheduled_date,sch.status AS schedule_status,sch.can_scan,
+        ac.chassis,ac.modules,ac.total,ac.sudah,ac.belum,ac.tidak_ditemukan,ac.module_sudah,ac.module_belum,ac.module_tidak_ditemukan
+      FROM offices o
+      CROSS JOIN LATERAL (
+        SELECT s.id,s.scheduled_date::text AS scheduled_date,s.status,(s.status IN ('terjadwal','berjalan') AND s.scheduled_date=$2::date) AS can_scan
+        FROM mapping_schedules s
+        WHERE s.office_id=o.id AND s.status<>'dibatalkan' AND (s.assigned_to=$1 OR s.assigned_to IS NULL)
+          AND EXISTS(SELECT 1 FROM technician_areas ta WHERE ta.user_id=$1 AND ta.area=s.area)
+        ORDER BY (s.status IN ('terjadwal','berjalan') AND s.scheduled_date=$2::date) DESC,s.scheduled_date DESC,s.id DESC LIMIT 1
+      ) sch
+      CROSS JOIN LATERAL (
+        SELECT count(*) FILTER(WHERE a.kind='chassis')::int AS chassis,count(*) FILTER(WHERE a.kind='module')::int AS modules,count(*)::int AS total,
+          count(*) FILTER(WHERE a.mapping_status='sudah')::int AS sudah,count(*) FILTER(WHERE a.mapping_status='belum')::int AS belum,
+          count(*) FILTER(WHERE a.mapping_status='tidak_ditemukan')::int AS tidak_ditemukan,
+          count(*) FILTER(WHERE a.kind='module' AND a.mapping_status='sudah')::int AS module_sudah,
+          count(*) FILTER(WHERE a.kind='module' AND a.mapping_status='belum')::int AS module_belum,
+          count(*) FILTER(WHERE a.kind='module' AND a.mapping_status='tidak_ditemukan')::int AS module_tidak_ditemukan
+        FROM assets a WHERE a.office_id=o.id
+      ) ac
+      ORDER BY sch.can_scan DESC,o.name,o.id`, [user.id, today(config.APP_TIMEZONE)])).rows;
+    return { data: rows };
   });
   app.get('/api/technician/assets', async request => {
     const user = requireRole(request, 'teknisi');
@@ -120,8 +152,8 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
   app.patch('/api/assets/:id', async request => {
     const user = requireRole(request, 'admin', 'teknisi'); const assetId = paramId(request);
     const field = z.string().trim().max(255).nullable().transform(v => v ?? '');
-    const parsed = z.object({ ref: field.optional(), status: field.optional(), kondisi: field.optional(), condition: field.optional(), schedule_id: id.optional() }).strict()
-      .refine(v => ['ref', 'status', 'kondisi','condition'].some(k => k in v), 'Tidak ada perubahan.')
+    const parsed = z.object({ ref: field.optional(), status: field.optional(), kondisi: field.optional(), condition: field.optional(), label_code: text.optional(), schedule_id: id.optional() }).strict()
+      .refine(v => ['ref', 'status', 'kondisi','condition','label_code'].some(k => k in v), 'Tidak ada perubahan.')
       .refine(v => v.kondisi === undefined || v.condition === undefined || v.kondisi === v.condition, 'condition dan kondisi berbeda.').parse(request.body);
     const input = {...parsed,kondisi:parsed.kondisi ?? parsed.condition};
     if (user.role === 'teknisi' && input.kondisi !== undefined && !config.TECHNICIAN_CAN_EDIT_CONDITION) throw new ApiError(403, 'CONDITION_FORBIDDEN', 'Perubahan kondisi hanya untuk admin.');
@@ -134,7 +166,14 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
       const asset = assertExists((await tx.query('SELECT id,office_id FROM assets WHERE id=$1 FOR UPDATE', [assetId])).rows[0]);
       if (schedule && schedule.office_id !== asset.office_id) throw new ApiError(403, 'ASSET_FORBIDDEN', 'Aset di luar kantor penugasan.');
       const keys = (['ref', 'status', 'kondisi'] as const).filter(k => input[k] !== undefined);
-      return (await tx.query(`UPDATE assets SET ${keys.map((k, i) => `${k}=$${i + 1}`).join(',')} WHERE id=$${keys.length + 1} RETURNING *,kondisi AS condition`, [...keys.map(k => input[k]), assetId])).rows[0];
+      const values: any[] = keys.map(k => input[k]); const sets = keys.map((k, i) => `${k}=$${i + 1}`);
+      // Memperbarui kode label (tanpa scan) menandai label terpasang; kodenya harus unik.
+      if (input.label_code !== undefined) {
+        await assertLabelFree(tx, assetId, input.label_code);
+        values.push(input.label_code); sets.push(`label_code=$${values.length}`, "label_status='terpasang'");
+      }
+      values.push(assetId);
+      return (await tx.query(`UPDATE assets SET ${sets.join(',')} WHERE id=$${values.length} RETURNING *,kondisi AS condition`, values)).rows[0];
     }, user.id);
     return { data: updated };
   });
@@ -165,6 +204,7 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
         if(input.kind && expected.kind!==input.kind) throw new ApiError(422,'ASSET_MISMATCH','Jenis aset tidak sesuai dengan kind yang dipindai.');
       } else if (input.asset_id && !matches.some(a => a.id === input.asset_id)) throw new ApiError(422, 'ASSET_MISMATCH', 'Aset pilihan tidak cocok dengan SN dan kantor.');
       if (assetId) await requireVerifiedChassis(tx, assetId);
+      if (assetId && input.label_code) await assertLabelFree(tx, assetId, input.label_code);
       if(matchResult==='not_found' && (input.label_attached || input.label_code)) throw new ApiError(422,'LABEL_INVALID','Hasil tidak ditemukan tidak dapat memasang label.');
       if ((input.label_attached || input.label_code) && !assetId) throw new ApiError(422, 'ASSET_REQUIRED', 'Pilih aset sebelum memasang label.');
       if (input.label_code && !input.label_attached) throw new ApiError(422, 'LABEL_INVALID', 'Kode label memerlukan label_attached=true.');
@@ -191,6 +231,19 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
       if (asset.office_id !== schedule.office_id) throw new ApiError(403, 'ASSET_FORBIDDEN', 'Aset di luar kantor penugasan.');
       await requireVerifiedChassis(tx, assetId);
       return (await tx.query("UPDATE assets SET mapping_status='tidak_ditemukan' WHERE id=$1 RETURNING *", [assetId])).rows[0];
+    }, user.id);
+    return { data: result };
+  });
+  // Membatalkan tanda "tidak ditemukan": aset kembali belum termapping (mis. ternyata ditemukan kemudian).
+  app.post('/api/assets/:id/reset', async request => {
+    const user = requireRole(request, 'teknisi'); const assetId = paramId(request);
+    const input = z.object({ schedule_id: id }).strict().parse(request.body);
+    const result = await db.transaction(async tx => {
+      const schedule = await requireSchedule(tx, user, input.schedule_id, config.APP_TIMEZONE, true);
+      const asset = assertExists((await tx.query('SELECT id,office_id,mapping_status FROM assets WHERE id=$1 FOR UPDATE', [assetId])).rows[0]);
+      if (asset.office_id !== schedule.office_id) throw new ApiError(403, 'ASSET_FORBIDDEN', 'Aset di luar kantor penugasan.');
+      if (asset.mapping_status !== 'tidak_ditemukan') throw new ApiError(409, 'NOT_MARKED', 'Hanya aset yang ditandai tidak ditemukan yang dapat dikembalikan.');
+      return (await tx.query("UPDATE assets SET mapping_status='belum' WHERE id=$1 RETURNING *", [assetId])).rows[0];
     }, user.id);
     return { data: result };
   });

@@ -602,6 +602,31 @@
       ]
     },
     {
+      "name": "GET /api/technician/offices — Kantor yang dapat dibuka teknisi beserta jadwal dan jumlah asetnya",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "description": "Teknisi. Per kantor: schedule_id yang dipakai untuk membuka asetnya (jadwal aktif hari ini bila ada, jika tidak jadwal terbaru yang tidak dibatalkan), can_scan (jadwal aktif hari ini), jumlah chassis dan modul, serta jumlah aset per status (total, sudah, belum, tidak_ditemukan) dan khusus modul (module_*). Kantor tanpa jadwal yang dapat diakses tidak muncul. can_scan lebih dulu, lalu nama kantor.",
+        "url": {
+          "raw": "{{base_url}}/api/technician/offices",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "technician",
+            "offices"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
       "name": "GET /api/technician/assets — Aset di kantor jadwal teknisi",
       "request": {
         "method": "GET",
@@ -694,7 +719,7 @@
       }
     },
     {
-      "name": "PATCH /api/assets/:id — Ubah REF/STATUS/KONDISI secara atomik dengan audit",
+      "name": "PATCH /api/assets/:id — Ubah REF/STATUS/KONDISI atau kode label secara atomik dengan audit",
       "request": {
         "method": "PATCH",
         "header": [
@@ -707,7 +732,7 @@
             "value": "application/json"
           }
         ],
-        "description": "Admin / teknisi. Teknisi wajib menyertakan schedule_id aktif hari ini. kondisi mengikuti konfigurasi izin; condition diterima sebagai alias. null dinormalisasi menjadi string kosong.",
+        "description": "Admin / teknisi. Teknisi wajib menyertakan schedule_id aktif hari ini. kondisi mengikuti konfigurasi izin; condition diterima sebagai alias. null dinormalisasi menjadi string kosong. label_code memperbarui kode label (label_status menjadi terpasang); kode yang sudah dipakai aset lain ditolak 409 LABEL_IN_USE.",
         "url": {
           "raw": "{{base_url}}/api/assets/{{asset_id}}",
           "host": [
@@ -966,6 +991,45 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"reason\": \"Foto serial number tidak terbaca\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST /api/assets/:id/reset — Batalkan tanda tidak ditemukan; aset kembali belum termapping",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Teknisi pada jadwal aktif hari ini. Hanya aset berstatus tidak_ditemukan, selain itu 409 NOT_MARKED.",
+        "url": {
+          "raw": "{{base_url}}/api/assets/{{asset_id}}/reset",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "{{asset_id}}",
+            "reset"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"schedule_id\": \"{{schedule_id}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
