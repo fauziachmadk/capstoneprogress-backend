@@ -20,7 +20,7 @@ export async function fixture(overrides: Partial<Config> = {}, sendTelegram?: Te
         const tx: Database = {
           query: async <T extends Record<string, any> = any>(sql: string, params?: any[]) => {
             // pg accepts multi-statement migration SQL; PGlite's extended protocol needs exec for it.
-            if (!params && (sql.includes('CREATE TABLE') || sql.includes('CREATE TYPE'))) { await pg.exec(sql); return { rows: [] as T[] }; }
+            if (!params && (sql.includes('CREATE TABLE') || sql.includes('CREATE TYPE') || sql.includes('ALTER TABLE'))) { await pg.exec(sql); return { rows: [] as T[] }; }
             const result = await pg.query<T>(sql, params); return { rows: result.rows, rowCount: result.affectedRows };
           },
           transaction: async () => { throw new Error('Nested transaction'); }, close: async () => {},

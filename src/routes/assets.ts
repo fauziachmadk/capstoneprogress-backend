@@ -7,6 +7,7 @@ import { requireSchedule } from '../access.js';
 import { ApiError, assertExists } from '../errors.js';
 import { assetFilters, id, paramId, pagination, text } from '../validation.js';
 import { assetExcelColumns, exportExcel, importAssets } from '../services/excel.js';
+import { assertPhotoUrl } from './uploads.js';
 export function assetWhere(filters: z.infer<typeof assetFilters>) {
   const clauses: string[] = []; const values: any[] = [];
   const add = (clause: string, value: any) => { values.push(value); clauses.push(clause.replaceAll('?', `$${values.length}`)); };
@@ -18,7 +19,7 @@ export function assetWhere(filters: z.infer<typeof assetFilters>) {
   return { sql: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', values };
 }
 const assetSelect = `SELECT a.id,a.eq,a.kind,a.parent_id,a.serial_number,a.ref,a.status,a.kondisi,a.kondisi AS condition,a.asset_code,
-  a.office_id,a.mapping_status,a.label_status,a.label_code,a.created_at,a.updated_at,o.code AS office_code,o.name AS office_name,
+  a.office_id,a.mapping_status,a.label_status,a.label_code,a.photo_url,a.created_at,a.updated_at,o.code AS office_code,o.name AS office_name,
   p.serial_number AS parent_sn,
   (SELECT json_build_object('reason',r.reason,'rejected_by',coalesce(ru.name,''),'rejected_at',r.rejected_at)
     FROM mapping_rejections r LEFT JOIN users ru ON ru.id=r.rejected_by
@@ -137,7 +138,9 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
   app.post('/api/mapping-results', async (request, reply) => {
     const user = requireRole(request, 'teknisi');
     const input = z.object({ schedule_id: id, scanned_sn: text.transform(v => v.toUpperCase()), asset_id: id.nullable().optional(),
-      label_attached: z.boolean().default(false), label_code: text.optional() }).strict().parse(request.body);
+      label_attached: z.boolean().default(false), label_code: text.optional(), photo_url: z.string().trim().min(1).max(500).optional() }).strict().parse(request.body);
+    // Foto opsional di API (frontend yang mewajibkan); jika ada, harus URL Cloudinary proyek ini.
+    const photoUrl = input.photo_url === undefined ? null : assertPhotoUrl(config, input.photo_url);
     const result = await db.transaction(async tx => {
       const schedule = await requireSchedule(tx, user, input.schedule_id, config.APP_TIMEZONE, true);
       const matches = (await tx.query('SELECT id FROM assets WHERE serial_number=$1 AND office_id=$2 ORDER BY id FOR UPDATE', [input.scanned_sn, schedule.office_id])).rows;
@@ -150,12 +153,12 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
       if(matchResult==='not_found' && (input.label_attached || input.label_code)) throw new ApiError(422,'LABEL_INVALID','Hasil tidak ditemukan tidak dapat memasang label.');
       if ((input.label_attached || input.label_code) && !assetId) throw new ApiError(422, 'ASSET_REQUIRED', 'Pilih aset sebelum memasang label.');
       if (input.label_code && !input.label_attached) throw new ApiError(422, 'LABEL_INVALID', 'Kode label memerlukan label_attached=true.');
-      const scan = (await tx.query(`INSERT INTO mapping_results(schedule_id,asset_id,scanned_sn,result,scanned_by,label_attached)
-        VALUES($1,$2,$3,$4,$5,$6) RETURNING *`, [input.schedule_id, assetId, input.scanned_sn, matchResult, user.id, input.label_attached])).rows[0];
+      const scan = (await tx.query(`INSERT INTO mapping_results(schedule_id,asset_id,scanned_sn,result,scanned_by,label_attached,photo_url)
+        VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [input.schedule_id, assetId, input.scanned_sn, matchResult, user.id, input.label_attached, photoUrl])).rows[0];
       if (assetId && matchResult==='not_found') await tx.query("UPDATE assets SET mapping_status='tidak_ditemukan' WHERE id=$1",[assetId]);
       else if (assetId) await tx.query(`UPDATE assets SET mapping_status='sudah',
         label_status=CASE WHEN $2 THEN 'terpasang' ELSE label_status END,
-        label_code=coalesce($3,label_code) WHERE id=$1`, [assetId, input.label_attached, input.label_code ?? null]);
+        label_code=coalesce($3,label_code),photo_url=coalesce($4,photo_url) WHERE id=$1`, [assetId, input.label_attached, input.label_code ?? null, photoUrl]);
       // Mapping ulang menyelesaikan penolakan admin yang masih aktif.
       if (assetId && matchResult !== 'not_found') await tx.query('UPDATE mapping_rejections SET resolved_at=now() WHERE asset_id=$1 AND resolved_at IS NULL', [assetId]);
       await tx.query("UPDATE mapping_schedules SET status='berjalan' WHERE id=$1 AND status='terjadwal'", [input.schedule_id]);

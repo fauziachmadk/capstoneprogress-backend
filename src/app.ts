@@ -15,6 +15,7 @@ import { registerAssets } from './routes/assets.js';
 import { registerSchedules } from './routes/schedules.js';
 import { registerReports } from './routes/reports.js';
 import { registerNotifications, type TelegramSender } from './routes/notifications.js';
+import { registerUploads } from './routes/uploads.js';
 import { contractSchema } from './contracts.js';
 import { registerUsers } from './routes/users.js';
 import { registerMonitor } from './routes/monitor.js';
@@ -76,6 +77,7 @@ export async function buildApp(options: { db: Database; config: Config; logger?:
   registerSchedules(app, db, config);
   registerReports(app, db, config);
   registerNotifications(app, db, config, options.sendTelegram);
+  registerUploads(app, db, config);
   await app.ready();
   return app;
 }

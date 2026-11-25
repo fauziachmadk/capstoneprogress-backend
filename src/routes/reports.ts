@@ -9,7 +9,7 @@ import { today, type Config } from '../config.js';
 const filters = z.object({ ...pagination, office_id: id.optional(), schedule_id: id.optional(), date_from: date.optional(), date_to: date.optional(),
   result: z.enum(['found', 'not_found', 'multiple']).optional() }).strict()
   .refine(v => !v.date_from || !v.date_to || v.date_from <= v.date_to, 'Rentang tanggal tidak valid.');
-const reportSelect = `SELECT r.id,r.schedule_id,r.asset_id,r.scanned_sn,r.result,r.scanned_by,r.scanned_at,r.label_attached,
+const reportSelect = `SELECT r.id,r.schedule_id,r.asset_id,r.scanned_sn,r.result,r.scanned_by,r.scanned_at,r.label_attached,r.photo_url,
   s.scheduled_date::text,o.code AS office_code,o.name AS office_name,u.name AS technician_name,a.eq,a.kind,a.ref,a.status,a.kondisi
   FROM mapping_results r JOIN mapping_schedules s ON s.id=r.schedule_id JOIN offices o ON o.id=s.office_id
   JOIN users u ON u.id=r.scanned_by LEFT JOIN assets a ON a.id=r.asset_id`;

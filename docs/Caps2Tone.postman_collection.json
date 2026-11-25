@@ -898,6 +898,44 @@
       }
     },
     {
+      "name": "POST /api/uploads/sign — Tanda tangan unggah foto langsung ke Cloudinary",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "description": "Teknisi pada jadwal aktif hari ini. Kirim file ke upload_url sebagai multipart/form-data dengan field file, api_key, signature, dan semua isi params apa adanya. Hasilnya (secure_url) dikirim sebagai photo_url di POST /api/mapping-results; hanya URL Cloudinary proyek ini yang diterima. 503 jika Cloudinary belum dikonfigurasi.",
+        "url": {
+          "raw": "{{base_url}}/api/uploads/sign",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "uploads",
+            "sign"
+          ],
+          "query": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"schedule_id\": \"{{schedule_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "POST /api/assets/:id/reject — Tolak hasil mapping; aset kembali belum dan teknisi mengulang",
       "request": {
         "method": "POST",
