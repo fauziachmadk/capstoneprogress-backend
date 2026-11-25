@@ -2645,7 +2645,7 @@
         "tags": [
           "scan"
         ],
-        "description": "Teknisi. Result: found / not_found / multiple. SN dinormalisasi trim + uppercase.",
+        "description": "Teknisi. Result: found / not_found / multiple. SN dinormalisasi trim + uppercase. kind (chassis atau module, opsional) membatasi pencocokan ke satu jenis aset; tanpa kind semua jenis dicocokkan.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2662,6 +2662,13 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 2147483647
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "chassis",
+                      "module"
+                    ]
                   }
                 },
                 "required": [
@@ -2826,7 +2833,7 @@
         "tags": [
           "mapping-results"
         ],
-        "description": "Teknisi; jadwal aktif hari ini. Server menghitung result. Untuk multiple, asset_id opsional sebagai pilihan EQ; tanpa pilihan status aset tidak diubah. Hasil multiple tetap multiple.",
+        "description": "Teknisi; jadwal aktif hari ini. Server menghitung result. Untuk multiple, asset_id opsional sebagai pilihan EQ; tanpa pilihan status aset tidak diubah. Hasil multiple tetap multiple. kind (opsional) membatasi pencocokan ke chassis atau modul. Modul yang punya chassis induk baru bisa dipetakan setelah induknya berstatus sudah; jika belum, 409 CHASSIS_NOT_VERIFIED. Kirim asset_id agar server memastikan SN cocok dengan aset di halaman.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2862,6 +2869,13 @@
                   "photo_url": {
                     "type": "string",
                     "maxLength": 500
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "chassis",
+                      "module"
+                    ]
                   }
                 },
                 "required": [
@@ -3026,7 +3040,7 @@
         "tags": [
           "assets"
         ],
-        "description": "Teknisi pada jadwal aktif hari ini. Berbeda dari scan SN asing tanpa asset_id.",
+        "description": "Teknisi pada jadwal aktif hari ini. Modul hanya bisa ditandai setelah chassis induknya sudah terverifikasi (409 CHASSIS_NOT_VERIFIED). Berbeda dari scan SN asing tanpa asset_id.",
         "requestBody": {
           "required": true,
           "content": {

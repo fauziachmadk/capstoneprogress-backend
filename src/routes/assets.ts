@@ -25,6 +25,16 @@ const assetSelect = `SELECT a.id,a.eq,a.kind,a.parent_id,a.serial_number,a.ref,a
     FROM mapping_rejections r LEFT JOIN users ru ON ru.id=r.rejected_by
     WHERE r.asset_id=a.id AND r.resolved_at IS NULL) AS rejection
   FROM assets a JOIN offices o ON o.id=a.office_id LEFT JOIN assets p ON p.id=a.parent_id`;
+const kindFilter = z.enum(['chassis', 'module']);
+// Aturan lapangan: modul baru bisa dipetakan setelah chassis induknya terverifikasi (mapping_status sudah).
+// Modul tanpa induk tidak terkena aturan ini.
+async function requireVerifiedChassis(tx: Database, assetId: number) {
+  const parent = (await tx.query('SELECT p.id,p.eq,p.mapping_status FROM assets a JOIN assets p ON p.id=a.parent_id WHERE a.id=$1', [assetId])).rows[0];
+  if (parent && parent.mapping_status !== 'sudah') {
+    throw new ApiError(409, 'CHASSIS_NOT_VERIFIED', `Chassis induk ${parent.eq} belum terverifikasi. Scan chassis terlebih dahulu.`,
+      { chassis_id: parent.id, chassis_eq: parent.eq, chassis_mapping_status: parent.mapping_status });
+  }
+}
 export function registerAssets(app: FastifyInstance, db: Database, config: Config) {
   app.post('/api/assets', async (request, reply) => {
     const user = requireRole(request, 'admin');
@@ -130,26 +140,31 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
   });
   app.post('/api/scan/match', async request => {
     const user = requireRole(request, 'teknisi');
-    const input = z.object({ serial_number: text.transform(v => v.toUpperCase()), schedule_id: id }).strict().parse(request.body);
+    const input = z.object({ serial_number: text.transform(v => v.toUpperCase()), schedule_id: id, kind: kindFilter.optional() }).strict().parse(request.body);
     const schedule = await requireSchedule(db, user, input.schedule_id, config.APP_TIMEZONE, true);
-    const assets = (await db.query(`${assetSelect} WHERE a.serial_number=$1 AND a.office_id=$2 ORDER BY a.eq`, [input.serial_number, schedule.office_id])).rows;
+    // kind (opsional) membatasi pencocokan ke chassis atau modul; tanpa kind semua jenis dicocokkan.
+    const assets = (await db.query(`${assetSelect} WHERE a.serial_number=$1 AND a.office_id=$2 AND ($3::text IS NULL OR a.kind::text=$3) ORDER BY a.eq`,
+      [input.serial_number, schedule.office_id, input.kind ?? null])).rows;
     return { data: { result: assets.length === 0 ? 'not_found' : assets.length === 1 ? 'found' : 'multiple', assets } };
   });
   app.post('/api/mapping-results', async (request, reply) => {
     const user = requireRole(request, 'teknisi');
     const input = z.object({ schedule_id: id, scanned_sn: text.transform(v => v.toUpperCase()), asset_id: id.nullable().optional(),
-      label_attached: z.boolean().default(false), label_code: text.optional(), photo_url: z.string().trim().min(1).max(500).optional() }).strict().parse(request.body);
+      label_attached: z.boolean().default(false), label_code: text.optional(), photo_url: z.string().trim().min(1).max(500).optional(), kind: kindFilter.optional() }).strict().parse(request.body);
     // Foto opsional di API (frontend yang mewajibkan); jika ada, harus URL Cloudinary proyek ini.
     const photoUrl = input.photo_url === undefined ? null : assertPhotoUrl(config, input.photo_url);
     const result = await db.transaction(async tx => {
       const schedule = await requireSchedule(tx, user, input.schedule_id, config.APP_TIMEZONE, true);
-      const matches = (await tx.query('SELECT id FROM assets WHERE serial_number=$1 AND office_id=$2 ORDER BY id FOR UPDATE', [input.scanned_sn, schedule.office_id])).rows;
+      const matches = (await tx.query('SELECT id FROM assets WHERE serial_number=$1 AND office_id=$2 AND ($3::text IS NULL OR kind::text=$3) ORDER BY id FOR UPDATE',
+        [input.scanned_sn, schedule.office_id, input.kind ?? null])).rows;
       const matchResult = matches.length === 0 ? 'not_found' : matches.length === 1 ? 'found' : 'multiple';
       const assetId = input.asset_id ?? (matches.length === 1 ? matches[0].id : null);
       if (input.asset_id && matchResult === 'not_found') {
-        const expected=assertExists((await tx.query('SELECT id,office_id FROM assets WHERE id=$1 FOR UPDATE',[input.asset_id])).rows[0]);
+        const expected=assertExists((await tx.query('SELECT id,office_id,kind FROM assets WHERE id=$1 FOR UPDATE',[input.asset_id])).rows[0]);
         if(expected.office_id!==schedule.office_id) throw new ApiError(403,'ASSET_FORBIDDEN','Aset di luar kantor penugasan.');
+        if(input.kind && expected.kind!==input.kind) throw new ApiError(422,'ASSET_MISMATCH','Jenis aset tidak sesuai dengan kind yang dipindai.');
       } else if (input.asset_id && !matches.some(a => a.id === input.asset_id)) throw new ApiError(422, 'ASSET_MISMATCH', 'Aset pilihan tidak cocok dengan SN dan kantor.');
+      if (assetId) await requireVerifiedChassis(tx, assetId);
       if(matchResult==='not_found' && (input.label_attached || input.label_code)) throw new ApiError(422,'LABEL_INVALID','Hasil tidak ditemukan tidak dapat memasang label.');
       if ((input.label_attached || input.label_code) && !assetId) throw new ApiError(422, 'ASSET_REQUIRED', 'Pilih aset sebelum memasang label.');
       if (input.label_code && !input.label_attached) throw new ApiError(422, 'LABEL_INVALID', 'Kode label memerlukan label_attached=true.');
@@ -174,6 +189,7 @@ export function registerAssets(app: FastifyInstance, db: Database, config: Confi
       const schedule = await requireSchedule(tx, user, input.schedule_id, config.APP_TIMEZONE, true);
       const asset = assertExists((await tx.query('SELECT id,office_id FROM assets WHERE id=$1 FOR UPDATE', [assetId])).rows[0]);
       if (asset.office_id !== schedule.office_id) throw new ApiError(403, 'ASSET_FORBIDDEN', 'Aset di luar kantor penugasan.');
+      await requireVerifiedChassis(tx, assetId);
       return (await tx.query("UPDATE assets SET mapping_status='tidak_ditemukan' WHERE id=$1 RETURNING *", [assetId])).rows[0];
     }, user.id);
     return { data: result };
