@@ -11,6 +11,10 @@ const scheduleInput = z.object({ office_id: id, area, scheduled_date: date, assi
 const scheduleSelect = `SELECT s.id,s.office_id,s.area,s.scheduled_date::text,s.assigned_to,s.status,s.created_by,s.created_at,
   o.code AS office_code,o.name AS office_name,u.name AS technician_name FROM mapping_schedules s
   JOIN offices o ON o.id=s.office_id LEFT JOIN users u ON u.id=s.assigned_to`;
+// Pembuatan menerima satu office_id (respons objek) atau office_ids (respons array, semuanya atomik).
+const scheduleCreate = z.object({ office_id: id.optional(), office_ids: z.array(id).min(1).max(50).optional(), area, scheduled_date: date,
+  assigned_to: id.nullable().optional(), status: status.default('terjadwal') }).strict()
+  .refine(v => (v.office_id === undefined) !== (v.office_ids === undefined), 'Isi office_id atau office_ids, salah satu saja.');
 const schedulePatch = scheduleInput.partial().extend({ id: id.optional() }).strict().refine(v => Object.keys(v).some(k => k !== 'id'), 'Tidak ada perubahan.');
 const officeInput = z.object({ code: text.transform(v => v.toUpperCase()), name: text, address: z.string().trim().max(1000).default(''), area: area.nullable().default(null) }).strict();
 export function registerSchedules(app: FastifyInstance, db: Database, config: Config) {
@@ -69,16 +73,26 @@ export function registerSchedules(app: FastifyInstance, db: Database, config: Co
   });
   app.get('/api/schedules', async request => {
     const user = requireRole(request, 'admin', 'teknisi');
-    const q = z.object({ ...pagination, office_id: id.optional(), assigned_to: id.optional(), status: status.optional(), date: date.optional(), area: area.optional() }).strict().parse(request.query);
+    const q = z.object({ ...pagination, office_id: id.optional(), assigned_to: id.optional(), status: status.optional(), date: date.optional(), area: area.optional(),
+      date_from: date.optional(), date_to: date.optional(), search: z.string().trim().max(100).optional(), unassigned: z.enum(['true', 'false']).optional() }).strict()
+      .refine(v => !v.date_from || !v.date_to || v.date_from <= v.date_to, 'Rentang tanggal tidak valid.').parse(request.query);
     const technicianId = user.role === 'teknisi' ? user.id : q.assigned_to ?? null;
     if (user.role === 'teknisi' && q.assigned_to && q.assigned_to !== user.id) throw new ApiError(403, 'FORBIDDEN', 'Hanya jadwal sendiri yang dapat dibaca.');
-    const args = [q.office_id ?? null, technicianId, q.status ?? null, q.date ?? (user.role==='teknisi' ? today(config.APP_TIMEZONE) : null), q.area ?? null, user.role === 'teknisi' ? user.id : null];
+    if (user.role === 'teknisi' && q.unassigned === 'true') throw new ApiError(403, 'FORBIDDEN', 'Filter belum ditugaskan hanya untuk admin.');
+    // Teknisi tanpa filter tanggal hanya melihat jadwal hari ini.
+    const defaultDay = user.role === 'teknisi' && !q.date && !q.date_from && !q.date_to ? today(config.APP_TIMEZONE) : null;
+    const pattern = q.search ? `%${q.search.replace(/[\\%_]/g, '\\$&')}%` : null;
+    const args = [q.office_id ?? null, technicianId, q.status ?? null, q.date ?? defaultDay, q.area ?? null, user.role === 'teknisi' ? user.id : null,
+      q.date_from ?? null, q.date_to ?? null, pattern, q.unassigned === 'true'];
     const where = `WHERE ($1::integer IS NULL OR s.office_id=$1) AND ($2::integer IS NULL OR s.assigned_to=$2 OR ($6::integer IS NOT NULL AND s.assigned_to IS NULL))
       AND ($3::text IS NULL OR s.status::text=$3) AND ($4::date IS NULL OR s.scheduled_date=$4) AND ($5::text IS NULL OR s.area::text=$5)
-      AND ($6::integer IS NULL OR (s.status<>'dibatalkan' AND EXISTS(SELECT 1 FROM technician_areas ta WHERE ta.user_id=$6 AND ta.area=s.area)))`;
-    const total = Number((await db.query(`SELECT count(*) AS total FROM mapping_schedules s ${where}`, args)).rows[0].total);
+      AND ($6::integer IS NULL OR (s.status<>'dibatalkan' AND EXISTS(SELECT 1 FROM technician_areas ta WHERE ta.user_id=$6 AND ta.area=s.area)))
+      AND ($7::date IS NULL OR s.scheduled_date>=$7) AND ($8::date IS NULL OR s.scheduled_date<=$8)
+      AND ($9::text IS NULL OR o.name ILIKE $9 OR u.name ILIKE $9) AND (NOT $10::boolean OR s.assigned_to IS NULL)`;
+    const total = Number((await db.query(`SELECT count(*) AS total FROM mapping_schedules s JOIN offices o ON o.id=s.office_id
+      LEFT JOIN users u ON u.id=s.assigned_to ${where}`, args)).rows[0].total);
     const rows = (await db.query(`${scheduleSelect} ${where}
-      ORDER BY s.scheduled_date,s.id LIMIT $7 OFFSET $8`, [...args, q.limit, (q.page - 1) * q.limit])).rows;
+      ORDER BY s.scheduled_date,s.id LIMIT $11 OFFSET $12`, [...args, q.limit, (q.page - 1) * q.limit])).rows;
     return { data: rows, meta: { page: q.page, limit: q.limit, total } };
   });
   async function validateSchedule(tx: Database, value: z.infer<typeof scheduleInput>, checkDate: boolean) {
@@ -92,14 +106,25 @@ export function registerSchedules(app: FastifyInstance, db: Database, config: Co
     }
   }
   app.post('/api/schedules', async (request, reply) => {
-    const user = requireRole(request, 'admin'); const input = scheduleInput.parse(request.body);
+    const user = requireRole(request, 'admin'); const input = scheduleCreate.parse(request.body);
     if (input.status !== 'terjadwal') throw new ApiError(422, 'INITIAL_STATUS_INVALID', 'Jadwal baru harus berstatus terjadwal.');
-    const row = await db.transaction(async tx => {
-      await validateSchedule(tx, input, true);
+    const officeIds = [...new Set(input.office_ids ?? [input.office_id!])];
+    const ids = await db.transaction(async tx => {
+      for (const officeId of officeIds) {
+        await validateSchedule(tx, { office_id: officeId, area: input.area, scheduled_date: input.scheduled_date, assigned_to: input.assigned_to, status: input.status }, true);
+      }
+      // Satu kantor hanya boleh punya satu jadwal aktif per tanggal. Sebut nama kantor yang bentrok agar UI bisa menampilkannya.
+      const conflicts = (await tx.query(`SELECT o.id AS office_id,o.name AS office_name FROM mapping_schedules s JOIN offices o ON o.id=s.office_id
+        WHERE s.office_id=ANY($1::integer[]) AND s.scheduled_date=$2::date AND s.status IN ('terjadwal','berjalan') ORDER BY o.name`, [officeIds, input.scheduled_date])).rows;
+      if (conflicts.length) {
+        throw new ApiError(409, 'SCHEDULE_CONFLICT', `Sudah ada jadwal aktif di tanggal itu untuk: ${conflicts.map(c => c.office_name).join(', ')}.`, { offices: conflicts });
+      }
       return (await tx.query(`INSERT INTO mapping_schedules(office_id,area,scheduled_date,assigned_to,status,created_by)
-        VALUES($1,$2,$3,$4,$5,$6) RETURNING *`, [input.office_id, input.area, input.scheduled_date, input.assigned_to ?? null, input.status, user.id])).rows[0];
+        SELECT o,$2::area_type,$3::date,$4::integer,$5::schedule_status,$6::integer FROM unnest($1::integer[]) AS o RETURNING id`,
+      [officeIds, input.area, input.scheduled_date, input.assigned_to ?? null, input.status, user.id])).rows.map(r => r.id as number);
     });
-    return reply.code(201).send({ data: (await db.query(`${scheduleSelect} WHERE s.id=$1`, [row.id])).rows[0] });
+    const rows = (await db.query(`${scheduleSelect} WHERE s.id=ANY($1::integer[]) ORDER BY o.name,s.id`, [ids])).rows;
+    return reply.code(201).send({ data: input.office_ids ? rows : rows[0] });
   });
   const update = async (request: FastifyRequest) => {
     requireRole(request, 'admin'); const input = schedulePatch.parse(request.body);

@@ -985,7 +985,7 @@
             "value": "{{csrf_token}}"
           }
         ],
-        "description": "Admin; teknisi melihat jadwal sendiri dan jadwal tanpa penugasan pada area layanannya.",
+        "description": "Admin; teknisi melihat jadwal sendiri dan jadwal tanpa penugasan pada area layanannya. Teknisi tanpa filter tanggal hanya melihat hari ini. date_from/date_to membentuk rentang; search mencari nama kantor atau teknisi; unassigned=true (admin) hanya jadwal tanpa teknisi.",
         "url": {
           "raw": "{{base_url}}/api/schedules",
           "host": [
@@ -1000,7 +1000,7 @@
       }
     },
     {
-      "name": "POST /api/schedules — Buat jadwal",
+      "name": "POST /api/schedules — Buat jadwal untuk satu atau beberapa kantor",
       "request": {
         "method": "POST",
         "header": [
@@ -1013,7 +1013,7 @@
             "value": "application/json"
           }
         ],
-        "description": "Admin. Tanggal >= hari ini; kantor, area, teknisi harus cocok; jadwal aktif unik per kantor/tanggal.",
+        "description": "Admin. Isi office_id (respons objek) atau office_ids hingga 50 kantor (respons array, semuanya atomik). Tanggal >= hari ini; kantor, area, teknisi harus cocok; jadwal aktif unik per kantor/tanggal. Bentrok dijawab 409 SCHEDULE_CONFLICT dengan details.offices berisi kantor yang bentrok.",
         "url": {
           "raw": "{{base_url}}/api/schedules",
           "host": [
@@ -1027,7 +1027,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"office_id\": \"{{office_id}}\",\n  \"area\": \"grobogan\",\n  \"scheduled_date\": \"{{scheduled_date}}\",\n  \"assigned_to\": \"{{technician_id}}\"\n}",
+          "raw": "{\n  \"office_ids\": [\n    \"{{office_id}}\"\n  ],\n  \"area\": \"grobogan\",\n  \"scheduled_date\": \"{{scheduled_date}}\",\n  \"assigned_to\": \"{{technician_id}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
