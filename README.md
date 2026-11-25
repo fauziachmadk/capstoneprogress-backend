@@ -106,9 +106,9 @@ SN asing menghasilkan `not_found` dengan `asset_id=null`. Jika `asset_id` invent
 
 `POST /api/assets/import?dry_run=true` memakai `multipart/form-data` satu field `file`; pratinjau adalah default. Simpan dengan `dry_run=false`. Keduanya menjalankan validasi dan transaksi yang sama; pratinjau selalu rollback, termasuk riwayat perubahan.
 
-Header wajib: **EQ, Jenis, Serial Number, Kode Kantor**. Header opsional: **SN Chassis, REF, Status, Kondisi, Kode Aset**. `Jenis` berisi `Chassis` atau `Modul`. Kode kantor harus sudah ada. SN Chassis harus cocok tepat satu chassis di kantor yang sama; baris chassis diproses sebelum modul sehingga urutan file tidak membatasi.
+Header wajib: **EQ, Jenis, Serial Number, Kode Kantor**. Header opsional: **SN Chassis, REF, Status, Kondisi, Kode Aset**. **Label** dan **Kode Label** hanya ditulis saat ekspor; saat impor keduanya dikenali tetapi diabaikan, jadi file hasil ekspor dapat diimpor ulang. `Jenis` berisi `Chassis` atau `Modul`. Kode kantor harus sudah ada. SN Chassis harus cocok tepat satu chassis di kantor yang sama; baris chassis diproses sebelum modul sehingga urutan file tidak membatasi.
 
-EQ adalah kunci upsert. SN dinormalisasi trim + uppercase dan sengaja tidak unik. Header opsional yang tidak ada mempertahankan nilai lama; header yang disertakan dengan sel kosong mengosongkan nilai tersebut. Formula/objek sel ditolak. Semua kesalahan baris dikembalikan beserta nomor baris; jika ada kesalahan, seluruh impor rollback. Maksimal XLSX 3 MB, satu sheet, 5.000 baris, 9 kolom, dan isi arsip 32 MB. Ekspor mengikuti filter, maksimal 10.000 baris; pagination hanya berlaku pada respons JSON.
+EQ adalah kunci upsert. SN dinormalisasi trim + uppercase dan sengaja tidak unik. Header opsional yang tidak ada mempertahankan nilai lama; header yang disertakan dengan sel kosong mengosongkan nilai tersebut. Formula/objek sel ditolak. Semua kesalahan baris dikembalikan beserta nomor baris; jika ada kesalahan, seluruh impor rollback. Maksimal XLSX 3 MB, satu sheet, 5.000 baris, 11 kolom, dan isi arsip 32 MB. Ekspor mengikuti filter, maksimal 10.000 baris; pagination hanya berlaku pada respons JSON.
 
 ## Telegram dan deployment
 

@@ -792,7 +792,7 @@
             "value": "{{csrf_token}}"
           }
         ],
-        "description": "Admin. multipart/form-data satu field file. Maks. 3 MB, satu sheet, 5.000 baris. Kolom opsional yang tidak disertakan dipertahankan; sel kosong menghapus nilai.",
+        "description": "Admin. multipart/form-data satu field file. Maks. 3 MB, satu sheet, 5.000 baris, 11 kolom. Kolom Label dan Kode Label (dari ekspor) dikenali tetapi diabaikan. Kolom opsional yang tidak disertakan dipertahankan; sel kosong menghapus nilai.",
         "url": {
           "raw": "{{base_url}}/api/assets/import?dry_run=true",
           "host": [
