@@ -11,6 +11,9 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   AUTH_SECRET: z.string().min(32),
   CRON_SECRET: optionalText,
+  CLOUDINARY_CLOUD_NAME: optionalText,
+  CLOUDINARY_API_KEY: optionalText,
+  CLOUDINARY_API_SECRET: optionalText,
   TELEGRAM_BOT_TOKEN: optionalText,
   TELEGRAM_CHAT_ID: optionalText,
   TELEGRAM_RECIPIENT_MODE: z.preprocess(blankToUndefined, z.enum(['group', 'technician']).default('group')),
@@ -34,6 +37,9 @@ export function loadConfig(env = process.env): Config {
   if (c.NODE_ENV === 'production' && (origins.some(v => !v.startsWith('https://')) || !c.CRON_SECRET || c.CRON_SECRET.length < 32)) {
     throw new Error('Produksi memerlukan origin HTTPS dan CRON_SECRET minimal 32 karakter.');
   }
+  const cloudinary = [c.CLOUDINARY_CLOUD_NAME, c.CLOUDINARY_API_KEY, c.CLOUDINARY_API_SECRET];
+  if (cloudinary.some(Boolean) && !cloudinary.every(Boolean)) throw new Error('Isi ketiga variabel CLOUDINARY_* atau kosongkan semuanya.');
+  if (c.CLOUDINARY_CLOUD_NAME && !/^[a-z0-9_-]+$/i.test(c.CLOUDINARY_CLOUD_NAME)) throw new Error('CLOUDINARY_CLOUD_NAME tidak valid.');
   if (c.COOKIE_SAME_SITE === 'none' && c.NODE_ENV !== 'production') throw new Error('SameSite none memerlukan HTTPS produksi.');
   return c;
 }

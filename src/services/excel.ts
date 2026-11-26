@@ -5,6 +5,10 @@ import type { Database } from '../db.js';
 import { ApiError } from '../errors.js';
 export const MAX_IMPORT_ROWS = 5000;
 const headers = ['EQ', 'Jenis', 'Serial Number', 'Kode Kantor', 'SN Chassis', 'REF', 'Status', 'Kondisi', 'Kode Aset'];
+// Kolom yang hanya ditulis saat ekspor. Saat impor dikenali tetapi diabaikan, sehingga file hasil ekspor dapat diimpor ulang.
+const exportOnlyHeaders = ['Label', 'Kode Label'];
+const knownHeaders = [...headers, ...exportOnlyHeaders];
+export const MAX_IMPORT_COLUMNS = knownHeaders.length;
 const rowSchema = z.object({
   eq: z.string().trim().min(1).max(255), kind: z.enum(['chassis', 'module']),
   serial_number: z.string().trim().min(1).max(255).transform(v => v.toUpperCase()),
@@ -14,6 +18,15 @@ const rowSchema = z.object({
   kondisi: z.string().trim().max(255).nullable(), asset_code: z.string().trim().max(255).nullable(),
 }).refine(v => v.kind !== 'chassis' || !v.parent_sn, { message: 'Chassis tidak boleh memiliki SN Chassis.' });
 type ImportRow = z.infer<typeof rowSchema> & { row: number; supplied_fields: string[] };
+// Pesan kesalahan baris dalam bahasa Indonesia dengan nama kolom Excel, bukan pesan mentah validator.
+const columnOf: Record<string, string> = { eq: 'EQ', kind: 'Jenis', serial_number: 'Serial Number', office_code: 'Kode Kantor', parent_sn: 'SN Chassis', ref: 'REF', status: 'Status', kondisi: 'Kondisi', asset_code: 'Kode Aset' };
+function describeIssue(issue: z.ZodIssue) {
+  const key = String(issue.path[0] ?? ''); const name = columnOf[key] ?? key;
+  if (key === 'kind') return 'Jenis harus Chassis atau Modul.';
+  if (issue.code === 'invalid_type' || issue.code === 'too_small') return `${name} wajib diisi.`;
+  if (issue.code === 'too_big') return `${name} terlalu panjang (maksimal 255 karakter).`;
+  return key ? `${name}: ${issue.message}` : issue.message;
+}
 type RowError = { row: number; message: string };
 export async function readExcel(buffer: Buffer): Promise<ImportRow[]> {
   if (buffer.length > 3 * 1024 * 1024) throw new ApiError(413, 'FILE_TOO_LARGE', 'File maksimal 3 MB.');
@@ -30,11 +43,11 @@ export async function readExcel(buffer: Buffer): Promise<ImportRow[]> {
   catch { throw new ApiError(422, 'INVALID_EXCEL', 'File harus berupa XLSX yang valid.'); }
   if (book.worksheets.length !== 1) throw new ApiError(422, 'INVALID_EXCEL', 'Gunakan tepat satu sheet.');
   const sheet = book.worksheets[0];
-  if (sheet.rowCount > MAX_IMPORT_ROWS + 1 || sheet.columnCount > 9) throw new ApiError(422, 'IMPORT_LIMIT', `Maksimal ${MAX_IMPORT_ROWS} baris dan 9 kolom.`);
+  if (sheet.rowCount > MAX_IMPORT_ROWS + 1 || sheet.columnCount > MAX_IMPORT_COLUMNS) throw new ApiError(422, 'IMPORT_LIMIT', `Maksimal ${MAX_IMPORT_ROWS} baris dan ${MAX_IMPORT_COLUMNS} kolom.`);
   const names: string[] = [];
   sheet.getRow(1).eachCell((cell, n) => { names[n - 1] = cell.text.trim(); });
-  if (['EQ', 'Jenis', 'Serial Number', 'Kode Kantor'].some(h => !names.includes(h)) || names.some(h => !headers.includes(h)) || new Set(names).size !== names.length) {
-    throw new ApiError(422, 'INVALID_HEADERS', 'Header Excel tidak sesuai.', { headers });
+  if (['EQ', 'Jenis', 'Serial Number', 'Kode Kantor'].some(h => !names.includes(h)) || names.some(h => !knownHeaders.includes(h)) || new Set(names).size !== names.length) {
+    throw new ApiError(422, 'INVALID_HEADERS', 'Header Excel tidak sesuai.', { headers: knownHeaders });
   }
   const rows: ImportRow[] = []; const errors: RowError[] = []; const seen = new Set<string>();
   for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber++) {
@@ -54,7 +67,7 @@ export async function readExcel(buffer: Buffer): Promise<ImportRow[]> {
       serial_number: value('Serial Number'), office_code: value('Kode Kantor'), parent_sn: value('SN Chassis'),
       ref: value('REF'), status: value('Status'), kondisi: value('Kondisi'), asset_code: value('Kode Aset') });
     if (!parsed.success || invalidCell) {
-      errors.push({ row: rowNumber, message: invalidCell ? 'Formula, tanggal, dan objek tidak diizinkan.' : parsed.error!.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ') });
+      errors.push({ row: rowNumber, message: invalidCell ? 'Formula, tanggal, dan objek tidak diizinkan.' : parsed.error!.issues.map(describeIssue).join('; ') });
       continue;
     }
     if (seen.has(parsed.data.eq)) errors.push({ row: rowNumber, message: 'EQ duplikat dalam file.' });
@@ -117,4 +130,4 @@ export async function exportExcel(rows: Record<string, any>[], columns: { header
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, rows.length + 1), column: columns.length } };
   return Buffer.from(await book.xlsx.writeBuffer());
 }
-export const assetExcelColumns = headers.map((header, index) => ({ header, key: ['eq', 'kind_label', 'serial_number', 'office_code', 'parent_sn', 'ref', 'status', 'kondisi', 'asset_code'][index] }));
+export const assetExcelColumns = knownHeaders.map((header, index) => ({ header, key: ['eq', 'kind_label', 'serial_number', 'office_code', 'parent_sn', 'ref', 'status', 'kondisi', 'asset_code', 'label_status', 'label_code'][index] }));

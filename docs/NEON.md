@@ -14,9 +14,18 @@ Dibuat pada 5 November 2026 atas permintaan pengguna.
 
 Koneksi `.env.local` menunjuk branch pengembangan. URL pooled digunakan aplikasi; URL direct digunakan migrasi. AUTH_SECRET, CRON_SECRET, dan password seed dibuat acak secara lokal. Nilai rahasia tidak dicantumkan di dokumentasi atau Git; pengguna dapat membacanya di `.env.local`.
 
-Kedua branch sudah memiliki skema lengkap dari migrasi 001, 002, dan 003: **10 tabel, 8 enum, 12 foreign key, 35 index, dan 8 trigger**. Migrasi pada `main` dijalankan dalam satu transaksi dengan advisory lock dan dicatat di `schema_migrations`. Perbandingan skema Neon antara `main` dan `dev-backend-fastify` menghasilkan diff kosong. Checksum migrasi sama pada kedua branch.
+Status skema (diperiksa langsung pada 19 dan 25 November 2026):
 
-`main` berisi skema dan tiga catatan migrasi; akun serta data bisnis belum diisi. Branch pengembangan berisi 5 akun seed, 2 kantor contoh awal, serta data DEMO yang disetujui pengguna: 2 kantor, 6 aset, 2 jadwal, 6 scan, 2 riwayat, dan 1 log contoh tanpa pengiriman pesan. Data DEMO di-commit dan dapat dibaca melalui API; detail ID di demo-data.json. Backend lokal tetap memakai branch pengembangan; koneksi `.env.local` tidak diganti.
+| Branch | Migrasi terpasang | Tabel di `public` | Catatan |
+|---|---|---|---|
+| `dev-backend-fastify` | 001 sampai 007 | 14 | Migrasi 004 sampai 007 diterapkan pada 25 November 2026 dengan `npm run db:migrate`. |
+| `main` | 001 sampai 003 | 10 | **Belum** menerima migrasi 004 sampai 007. Berisi 1 akun dan tanpa data bisnis. |
+
+Migrasi dijalankan dalam satu transaksi dengan advisory lock dan dicatat di `schema_migrations`. Skema `main` dan dev tidak lagi sama sampai 004 sampai 007 diterapkan ke `main`. Perbandingan skema dan checksum sebelumnya (10 tabel, 8 enum, 12 foreign key, 35 index, 8 trigger) hanya berlaku untuk 001 sampai 003.
+
+Migrasi 004 sampai 007 menambah tabel `equipment_types`, `inventory_sites`, `asset_inventory`, dan `mapping_rejections`, serta kolom `users.employee_type/approval_status/decided_at/decided_by` dan `photo_url` di `assets` dan `mapping_results`. Ringkasannya ada di [ERD](ERD.md). Tabel inventaris di dev sudah diisi dari `data_dummy_1000_baris.csv` pada 25 November 2026: 5 jenis perangkat, 10 site, dan 1000 aset (sudah dicocokkan dengan file). `main` belum berisi data itu. Akun seed dev (5 akun) otomatis berstatus `aktif`.
+
+`main` hanya berisi skema 001 sampai 003 dan 1 akun; tidak ada data bisnis. Branch pengembangan berisi 5 akun seed (dan akun uji `admin.smoke`, ditambahkan 25 November 2026 untuk `npm run smoke`), 2 kantor contoh awal, serta data DEMO yang disetujui pengguna: 2 kantor, 6 aset, 2 jadwal, 6 scan, 2 riwayat, dan 1 log contoh tanpa pengiriman pesan. Data DEMO di-commit dan dapat dibaca melalui API; detail ID di demo-data.json. Backend lokal tetap memakai branch pengembangan; koneksi `.env.local` tidak diganti.
 
 ## Tabel dan alur data
 
@@ -31,6 +40,8 @@ Kedua branch sudah memiliki skema lengkap dari migrasi 001, 002, dan 003: **10 t
 | `mapping_results` | `POST /api/mapping-results`; dibaca laporan `/api/reports/mapping`. |
 | `asset_history` | Trigger otomatis untuk REF/STATUS/KONDISI; baca `/api/assets/:id/history`. |
 | `notification_logs` | Dicatat cron Telegram; baca `/api/notifications/logs`. |
+| `mapping_rejections` | `POST /api/assets/:id/reject` (admin); penolakan aktif tampil di `rejection` pada respons aset. |
+| `equipment_types`, `inventory_sites`, `asset_inventory` | Master inventaris dari CSV. Diisi lewat `npm run inventory:import` (dev sudah terisi 5, 10, dan 1000 baris). Dibaca admin lewat `GET /api/equipment-types`, `/api/inventory-sites`, `/api/inventory`, dan `/api/inventory/:id` (hanya baca). |
 | `schema_migrations` | Diisi sistem migrasi, menyimpan nama dan checksum SQL. |
 
 Urutan pengisian data: akun dan area teknisi → kantor → impor dataset aset → jadwal dan penugasan → scan → laporan. Riwayat aset, sesi, dan log notifikasi dikelola otomatis oleh backend. EQ dan kode kantor unik; SN sengaja dapat berulang. KONDISI memakai nama kolom `kondisi`, ID berupa integer, dan UUID lama tersimpan pada `legacy_id`. Penyesuaian terhadap queryDB.md dijelaskan di [QUERYDB-IMPLEMENTATION.md](QUERYDB-IMPLEMENTATION.md). Detail relasi tersedia di [ERD](ERD.md).

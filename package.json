@@ -16,6 +16,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:demo": "tsx scripts/demo-seed.ts",
     "assets:import": "tsx scripts/import-assets.ts",
+    "inventory:import": "tsx scripts/import-inventory.ts",
+    "inventory:sync": "tsx scripts/sync-inventory.ts",
     "docs:generate": "tsx scripts/openapi.ts",
     "smoke": "tsx scripts/smoke.ts",
     "smoke:write": "tsx scripts/smoke-write.ts",

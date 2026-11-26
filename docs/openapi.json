@@ -876,7 +876,7 @@
         "tags": [
           "assets"
         ],
-        "description": "Admin.",
+        "description": "Admin. sort (eq, kind, serial_number, office, ref, status, kondisi, mapping_status, label_status, label_code) dan dir (asc atau desc) mengurutkan di server; tanpa sort urut EQ.",
         "parameters": [
           {
             "schema": {
@@ -952,6 +952,39 @@
             },
             "in": "query",
             "name": "mapping_status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "eq",
+                "kind",
+                "serial_number",
+                "office",
+                "ref",
+                "status",
+                "kondisi",
+                "mapping_status",
+                "label_status",
+                "label_code"
+              ]
+            },
+            "in": "query",
+            "name": "sort",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "asc"
+            },
+            "in": "query",
+            "name": "dir",
             "required": false
           }
         ],
@@ -1246,11 +1279,11 @@
         }
       },
       "patch": {
-        "summary": "Ubah REF/STATUS/KONDISI secara atomik dengan audit",
+        "summary": "Ubah REF/STATUS/KONDISI atau kode label secara atomik dengan audit",
         "tags": [
           "assets"
         ],
-        "description": "Admin / teknisi. Teknisi wajib menyertakan schedule_id aktif hari ini. kondisi mengikuti konfigurasi izin; condition diterima sebagai alias. null dinormalisasi menjadi string kosong.",
+        "description": "Admin / teknisi. Teknisi wajib menyertakan schedule_id aktif hari ini. kondisi mengikuti konfigurasi izin; condition diterima sebagai alias. null dinormalisasi menjadi string kosong. label_code memperbarui kode label (label_status menjadi terpasang); kode yang sudah dipakai aset lain ditolak 409 LABEL_IN_USE.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1281,6 +1314,11 @@
                     "minLength": 1,
                     "maxLength": 255,
                     "nullable": true
+                  },
+                  "label_code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
                   },
                   "schedule_id": {
                     "type": "integer",
@@ -1315,6 +1353,149 @@
             "description": "csrf_token dari login atau /api/auth/me."
           }
         ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/technician/offices": {
+      "get": {
+        "summary": "Kantor yang dapat dibuka teknisi beserta jadwal dan jumlah asetnya",
+        "tags": [
+          "technician"
+        ],
+        "description": "Teknisi. Per kantor: schedule_id yang dipakai untuk membuka asetnya (jadwal aktif hari ini bila ada, jika tidak jadwal terbaru yang tidak dibatalkan), can_scan (jadwal aktif hari ini), jumlah chassis dan modul, serta jumlah aset per status (total, sudah, belum, tidak_ditemukan) dan khusus modul (module_*). Kantor tanpa jadwal yang dapat diakses tidak muncul. can_scan lebih dulu, lalu nama kantor.",
         "security": [
           {
             "session": []
@@ -2265,7 +2446,7 @@
         "tags": [
           "assets"
         ],
-        "description": "Admin. multipart/form-data satu field file. Maks. 3 MB, satu sheet, 5.000 baris. Kolom opsional yang tidak disertakan dipertahankan; sel kosong menghapus nilai.",
+        "description": "Admin. multipart/form-data satu field file. Maks. 3 MB, satu sheet, 5.000 baris, 11 kolom. Kolom Label dan Kode Label (dari ekspor) dikenali tetapi diabaikan. Kolom opsional yang tidak disertakan dipertahankan; sel kosong menghapus nilai.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2645,7 +2826,7 @@
         "tags": [
           "scan"
         ],
-        "description": "Teknisi. Result: found / not_found / multiple. SN dinormalisasi trim + uppercase.",
+        "description": "Teknisi. Result: found / not_found / multiple. SN dinormalisasi trim + uppercase. kind (chassis atau module, opsional) membatasi pencocokan ke satu jenis aset; tanpa kind semua jenis dicocokkan.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2662,6 +2843,13 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 2147483647
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "chassis",
+                      "module"
+                    ]
                   }
                 },
                 "required": [
@@ -2826,7 +3014,7 @@
         "tags": [
           "mapping-results"
         ],
-        "description": "Teknisi; jadwal aktif hari ini. Server menghitung result. Untuk multiple, asset_id opsional sebagai pilihan EQ; tanpa pilihan status aset tidak diubah. Hasil multiple tetap multiple.",
+        "description": "Teknisi; jadwal aktif hari ini. Server menghitung result. Untuk multiple, asset_id opsional sebagai pilihan EQ; tanpa pilihan status aset tidak diubah. Hasil multiple tetap multiple. kind (opsional) membatasi pencocokan ke chassis atau modul. Modul yang punya chassis induk baru bisa dipetakan setelah induknya berstatus sudah; jika belum, 409 CHASSIS_NOT_VERIFIED. Kirim asset_id agar server memastikan SN cocok dengan aset di halaman.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2858,6 +3046,17 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 255
+                  },
+                  "photo_url": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "chassis",
+                      "module"
+                    ]
                   }
                 },
                 "required": [
@@ -3022,7 +3221,7 @@
         "tags": [
           "assets"
         ],
-        "description": "Teknisi pada jadwal aktif hari ini. Berbeda dari scan SN asing tanpa asset_id.",
+        "description": "Teknisi pada jadwal aktif hari ini. Modul hanya bisa ditandai setelah chassis induknya sudah terverifikasi (409 CHASSIS_NOT_VERIFIED). Berbeda dari scan SN asing tanpa asset_id.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3038,6 +3237,376 @@
                 },
                 "required": [
                   "schedule_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "description": "csrf_token dari login atau /api/auth/me."
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{id}/reset": {
+      "post": {
+        "summary": "Batalkan tanda tidak ditemukan; aset kembali belum termapping",
+        "tags": [
+          "assets"
+        ],
+        "description": "Teknisi pada jadwal aktif hari ini. Hanya aset berstatus tidak_ditemukan, selain itu 409 NOT_MARKED.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schedule_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  }
+                },
+                "required": [
+                  "schedule_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "description": "csrf_token dari login atau /api/auth/me."
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{id}/reject": {
+      "post": {
+        "summary": "Tolak hasil mapping; aset kembali belum dan teknisi mengulang",
+        "tags": [
+          "assets"
+        ],
+        "description": "Admin. Hanya aset dengan mapping_status sudah. Foto dan label lama dipertahankan; respons aset memuat objek rejection (reason, rejected_by, rejected_at) sampai teknisi memetakan ulang.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "reason"
                 ],
                 "additionalProperties": false
               }
@@ -3252,6 +3821,22 @@
                   "is_active": {
                     "type": "boolean"
                   },
+                  "employee_type": {
+                    "type": "string",
+                    "enum": [
+                      "karyawan",
+                      "magang"
+                    ]
+                  },
+                  "approval_status": {
+                    "type": "string",
+                    "enum": [
+                      "menunggu",
+                      "aktif",
+                      "ditolak",
+                      "nonaktif"
+                    ]
+                  },
                   "telegram_chat_id": {
                     "type": "string",
                     "nullable": true
@@ -3415,7 +4000,7 @@
         }
       },
       "get": {
-        "summary": "Daftar pengguna untuk penugasan",
+        "summary": "Daftar pengguna untuk penugasan dan persetujuan",
         "tags": [
           "users"
         ],
@@ -3476,6 +4061,32 @@
             },
             "in": "query",
             "name": "is_active",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "menunggu",
+                "aktif",
+                "ditolak",
+                "nonaktif"
+              ]
+            },
+            "in": "query",
+            "name": "approval_status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "karyawan",
+                "magang"
+              ]
+            },
+            "in": "query",
+            "name": "employee_type",
             "required": false
           }
         ],
@@ -3666,6 +4277,22 @@
                   "is_active": {
                     "type": "boolean"
                   },
+                  "employee_type": {
+                    "type": "string",
+                    "enum": [
+                      "karyawan",
+                      "magang"
+                    ]
+                  },
+                  "approval_status": {
+                    "type": "string",
+                    "enum": [
+                      "menunggu",
+                      "aktif",
+                      "ditolak",
+                      "nonaktif"
+                    ]
+                  },
                   "telegram_chat_id": {
                     "type": "string",
                     "nullable": true
@@ -3705,6 +4332,214 @@
         ],
         "responses": {
           "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Daftar akun teknisi (menunggu persetujuan admin)",
+        "tags": [
+          "auth"
+        ],
+        "description": "Publik. Dibatasi 5 permintaan per menit. Akun berstatus menunggu dan baru bisa login setelah admin mengubah approval_status menjadi aktif.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "username": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 72
+                  },
+                  "employee_type": {
+                    "type": "string",
+                    "enum": [
+                      "karyawan",
+                      "magang"
+                    ]
+                  },
+                  "areas": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "grobogan",
+                        "solo"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "name",
+                  "username",
+                  "password",
+                  "areas"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "description": "csrf_token dari login atau /api/auth/me."
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
             "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
             "content": {
               "application/json": {
@@ -4734,7 +5569,7 @@
         "tags": [
           "schedules"
         ],
-        "description": "Admin; teknisi melihat jadwal sendiri dan jadwal tanpa penugasan pada area layanannya.",
+        "description": "Admin; teknisi melihat jadwal sendiri dan jadwal tanpa penugasan pada area layanannya. Teknisi tanpa filter tanggal hanya melihat hari ini. date_from/date_to membentuk rentang; search mencari nama kantor atau teknisi; unassigned=true (admin) hanya jadwal tanpa teknisi.",
         "parameters": [
           {
             "schema": {
@@ -4810,6 +5645,45 @@
             },
             "in": "query",
             "name": "date",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "in": "query",
+            "name": "date_from",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "in": "query",
+            "name": "date_to",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "in": "query",
+            "name": "search",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "in": "query",
+            "name": "unassigned",
             "required": false
           }
         ],
@@ -4949,11 +5823,11 @@
         }
       },
       "post": {
-        "summary": "Buat jadwal",
+        "summary": "Buat jadwal untuk satu atau beberapa kantor",
         "tags": [
           "schedules"
         ],
-        "description": "Admin. Tanggal >= hari ini; kantor, area, teknisi harus cocok; jadwal aktif unik per kantor/tanggal.",
+        "description": "Admin. Isi office_id (respons objek) atau office_ids hingga 50 kantor (respons array, semuanya atomik). Tanggal >= hari ini; kantor, area, teknisi harus cocok; jadwal aktif unik per kantor/tanggal. Bentrok dijawab 409 SCHEDULE_CONFLICT dengan details.offices berisi kantor yang bentrok.",
         "requestBody": {
           "required": true,
           "content": {
@@ -4991,10 +5865,20 @@
                       "selesai",
                       "dibatalkan"
                     ]
+                  },
+                  "office_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483647
+                    },
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "uniqueItems": true
                   }
                 },
                 "required": [
-                  "office_id",
                   "area",
                   "scheduled_date"
                 ],
@@ -5893,7 +6777,7 @@
         "tags": [
           "dashboard"
         ],
-        "description": "Admin.",
+        "description": "Admin. Memuat percent (sudah / total) dan today: jumlah scan found, not_found, multiple serta perubahan REF dan STATUS pada tanggal hari ini (APP_TIMEZONE).",
         "security": [
           {
             "session": []
@@ -6036,7 +6920,7 @@
         "tags": [
           "dashboard"
         ],
-        "description": "Admin. Progres = (sudah + tidak_ditemukan) / total. Status aset merupakan keadaan terkini, bukan snapshot per jadwal.",
+        "description": "Admin. Progres = (sudah + tidak_ditemukan) / total; percent = sudah / total. Status aset merupakan keadaan terkini, bukan snapshot per jadwal. Tiap kantor juga memuat next_date (jadwal terjadwal terdekat mulai hari ini), last_activity (scan terakhir) dan schedule_state (berjalan, terjadwal, selesai, atau belum).",
         "parameters": [
           {
             "schema": {
@@ -6284,6 +7168,19 @@
             "in": "query",
             "name": "date_to",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "found",
+                "not_found",
+                "multiple"
+              ]
+            },
+            "in": "query",
+            "name": "result",
+            "required": false
           }
         ],
         "security": [
@@ -6487,6 +7384,19 @@
             },
             "in": "query",
             "name": "date_to",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "found",
+                "not_found",
+                "multiple"
+              ]
+            },
+            "in": "query",
+            "name": "result",
             "required": false
           }
         ],
@@ -6786,6 +7696,334 @@
         }
       }
     },
+    "/api/schedules/notify-preview": {
+      "get": {
+        "summary": "Pratinjau kirim jadwal ke Telegram per tanggal",
+        "tags": [
+          "schedules"
+        ],
+        "description": "Admin. Satu penerima per teknisi (kantor, total dan sisa perangkat belum termapping, linked, isi pesan, last_sent) plus unassigned: kantor berjadwal tanpa teknisi aktif. Chat ID tidak pernah dikembalikan.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "in": "query",
+            "name": "date",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schedules/notify": {
+      "post": {
+        "summary": "Kirim jadwal ke Telegram secara manual",
+        "tags": [
+          "schedules"
+        ],
+        "description": "Admin. Satu pesan per teknisi untuk tanggal itu; teknisi tanpa Telegram terhubung dilewati. Setiap pengiriman dicatat di notification_logs (type jadwal_manual) tanpa chat ID atau token. 503 jika bot belum dikonfigurasi. Kegagalan satu teknisi dilaporkan di results tanpa menghentikan yang lain.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                },
+                "required": [
+                  "date"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "description": "csrf_token dari login atau /api/auth/me."
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/cron/notify-schedule": {
       "get": {
         "summary": "Kirim notifikasi jadwal hari ini",
@@ -6939,6 +8177,932 @@
         "security": [
           {
             "cron": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/uploads/sign": {
+      "post": {
+        "summary": "Tanda tangan unggah foto langsung ke Cloudinary",
+        "tags": [
+          "uploads"
+        ],
+        "description": "Teknisi pada jadwal aktif hari ini. Kirim file ke upload_url sebagai multipart/form-data dengan field file, api_key, signature, dan semua isi params apa adanya. Hasilnya (secure_url) dikirim sebagai photo_url di POST /api/mapping-results; hanya URL Cloudinary proyek ini yang diterima. 503 jika Cloudinary belum dikonfigurasi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schedule_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  }
+                },
+                "required": [
+                  "schedule_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": true,
+            "description": "csrf_token dari login atau /api/auth/me."
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/equipment-types": {
+      "get": {
+        "summary": "Daftar jenis perangkat (master inventaris)",
+        "tags": [
+          "equipment-types"
+        ],
+        "description": "Admin. Memuat items: jumlah aset inventaris per jenis. search mencari nama, kategori, manufacturer, atau model.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "search",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory-sites": {
+      "get": {
+        "summary": "Daftar site master inventaris",
+        "tags": [
+          "inventory-sites"
+        ],
+        "description": "Admin. Berbeda dari offices. Memuat items: jumlah aset inventaris per site. search mencari kode, nama, atau functional location.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "search",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory": {
+      "get": {
+        "summary": "Daftar aset master inventaris",
+        "tags": [
+          "inventory"
+        ],
+        "description": "Admin. Hanya baca; diisi lewat npm run inventory:import. Equipment ID di sini berbeda dari assets.eq. search mencari Equipment ID, nomor inventaris, NKA, atau serial number; date_from/date_to memfilter tanggal NKA.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "search",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "in": "query",
+            "name": "type_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "in": "query",
+            "name": "site_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "site_code",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "category",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "object_type",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "in": "query",
+            "name": "date_from",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "in": "query",
+            "name": "date_to",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Berhasil. data berisi objek atau daftar; meta pada daftar.",
+                  "type": "object",
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Lihat error.code dan error.message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory/{id}": {
+      "get": {
+        "summary": "Detail aset master inventaris beserta jenis dan site-nya",
+        "tags": [
+          "inventory"
+        ],
+        "description": "Admin.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
           }
         ],
         "responses": {
